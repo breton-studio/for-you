@@ -1,0 +1,102 @@
+{
+  "collaborative+refined+personal-meaning+botanical": {
+    "hero": {
+      "headline": "Let's Design Your Nature-Inspired Story",
+      "subheadline": "Collaborative botanical artistry rooted in personal meaning",
+      "bodyCopy": "Working together to translate your connection with nature into refined botanical tattoos that honor organic beauty and your personal journey."
+    },
+    "cta": "Start Your Botanical Design Session",
+    "recommendedArtists": ["Wendy", "River", "Dani", "Ceren", "Lena"],
+    "recommendationCard": {
+      "title": "Based on your love for refined botanical work with personal meaning",
+      "description": "We recommend Wendy—her collaborative approach brings nature-inspired visions to life through delicate, meaningful botanical line work.",
+      "primaryCta": "See Wendy's Portfolio",
+      "secondaryCta": "Book Session"
+    },
+    "colorPalette": {
+      "primary": "#2d4a3e",
+      "accent": "#7a9d8f",
+      "background": "#f4f1e8"
+    }
+  },
+  "trust-expert+bold+quality+traditional": {
+    "hero": {
+      "headline": "Master Craftsmen of Traditional Tattoo Art",
+      "subheadline": "Award-winning artists delivering bold, timeless work",
+      "bodyCopy": "Led by internationally acclaimed artist Eva Karabudak, our master tattooers bring decades of experience to traditional and neo-traditional work. Every piece is executed with museum-quality precision."
+    },
+    "cta": "Consult with Our Masters",
+    "recommendedArtists": ["Eva", "Berkay", "Shani", "Meyk", "Dexter"],
+    "recommendationCard": {
+      "title": "Based on your appreciation for bold traditional work and expert craftsmanship",
+      "description": "We recommend Eva—founder and internationally acclaimed fine art tattooer with award-winning traditional and bold artistic vision.",
+      "primaryCta": "View Eva's Awards",
+      "secondaryCta": "Book with Eva"
+    },
+    "colorPalette": {
+      "primary": "#1c1c1c",
+      "accent": "#c41e3a",
+      "tertiary": "#f5d042"
+    }
+  },
+  "collaborative+refined+personal-meaning+geometric": {
+    "hero": {
+      "headline": "Let's Design Your Geometric Story",
+      "subheadline": "Collaborative design sessions for refined, meaningful line work",
+      "bodyCopy": "We specialize in working closely with you to translate your personal vision into clean geometric tattoos that celebrate your story with minimalist precision."
+    },
+    "cta": "Start Your Design Consultation",
+    "recommendedArtists": ["Mishka", "Eva", "Daniel", "Rémy", "Asami"],
+    "recommendationCard": {
+      "title": "Based on your preferences for refined geometric work with personal meaning",
+      "description": "We recommend Mishka—she specializes in collaborative geometric design sessions that bring meaningful concepts to life through precise line work.",
+      "primaryCta": "See Mishka's Work",
+      "secondaryCta": "Book Consultation"
+    },
+    "colorPalette": {
+      "primary": "#2a2a2a",
+      "accent": "#14b8a6",
+      "background": "#fafafa"
+    }
+  },
+  "spontaneous+bold+statement+traditional": {
+    "hero": {
+      "headline": "Bold Tattoos That Make a Statement",
+      "subheadline": "Eye-catching traditional work for those who dare",
+      "bodyCopy": "For those who decide with confidence—striking traditional tattoos that command attention and tell your story loudly."
+    },
+    "cta": "Book Your Bold Statement",
+    "recommendedArtists": ["Eva", "Dexter", "Meyk", "Berkay"],
+    "recommendationCard": {
+      "title": "Based on your love for bold, statement-making traditional work",
+      "description": "We recommend Eva—her bold traditional style creates unforgettable pieces that make powerful statements.",
+      "primaryCta": "See Bold Portfolio",
+      "secondaryCta": "Book Now"
+    },
+    "colorPalette": {
+      "primary": "#1c1c1c",
+      "accent": "#c41e3a",
+      "tertiary": "#f5d042"
+    }
+  },
+  "planned+refined+quality+botanical": {
+    "hero": {
+      "headline": "Exquisite Botanical Artistry Worth the Wait",
+      "subheadline": "Museum-quality botanical tattoos crafted with precision",
+      "bodyCopy": "For those who appreciate meticulous research and planning—delicate botanical work that showcases nature's beauty through expert craftsmanship."
+    },
+    "cta": "Schedule Your Consultation",
+    "recommendedArtists": ["Wendy", "Ceren", "Lena", "River"],
+    "recommendationCard": {
+      "title": "Based on your appreciation for refined botanical work and quality craftsmanship",
+      "description": "We recommend Wendy—her precise botanical work combines extensive research with exceptional execution.",
+      "primaryCta": "View Botanical Portfolio",
+      "secondaryCta": "Book Consultation"
+    },
+    "colorPalette": {
+      "primary": "#2d4a3e",
+      "accent": "#7a9d8f",
+      "background": "#f4f1e8"
+    }
+  }
+}

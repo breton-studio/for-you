@@ -1,0 +1,36 @@
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Chrome Extension
+*.pem
+*.crx
+*.zip
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+.tmp/
+tmp/
+temp/
+
+# Claude Code
+.claude/
+
+# Node modules (if we add any)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local

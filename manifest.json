@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "For You - Personalization Demo",
+  "version": "1.0.0",
+  "description": "Demonstrates cross-site personalization on Squarespace sites",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.ateliereva.com/*",
+    "https://ateliereva.com/*",
+    "http://www.ateliereva.com/*",
+    "http://ateliereva.com/*",
+    "https://*.squarespace.com/*"
+  ],
+  "action": {
+    "default_title": "Activate For You",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.ateliereva.com/*",
+        "https://ateliereva.com/*",
+        "http://www.ateliereva.com/*",
+        "http://ateliereva.com/*"
+      ],
+      "js": ["scripts/storage.js", "scripts/quiz.js", "scripts/personalization.js", "content.js"],
+      "css": ["styles/module.css", "styles/quiz.css", "styles/animations.css"],
+      "run_at": "document_idle",
+      "match_about_blank": true
+    }
+  ],
+  "icons": {
+    "16": "assets/icon-16.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["data/personalization-map.json"],
+      "matches": [
+        "https://www.ateliereva.com/*",
+        "https://ateliereva.com/*",
+        "http://www.ateliereva.com/*",
+        "http://ateliereva.com/*",
+        "file:///*"
+      ]
+    }
+  ]
+}
