@@ -1,0 +1,199 @@
+/* Animations - Elegant, Subtle, and Snappy */
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideInTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Page transformation states */
+.for-you-transforming {
+  position: relative;
+}
+
+.for-you-transforming::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+  z-index: 9998;
+  animation: fadeIn 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Section reordering animations */
+.for-you-section-moving {
+  transition: transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Content highlight pulse */
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(52, 199, 89, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0);
+  }
+}
+
+.for-you-highlight {
+  animation: highlightPulse 1000ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Loading states */
+.for-you-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.for-you-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Smooth height transitions for collapsing sections */
+.for-you-collapsing {
+  transition:
+    max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Expanding sections */
+.for-you-expanding {
+  transition:
+    max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stagger delays for multiple elements */
+.for-you-stagger-1 {
+  animation-delay: 50ms;
+}
+
+.for-you-stagger-2 {
+  animation-delay: 100ms;
+}
+
+.for-you-stagger-3 {
+  animation-delay: 150ms;
+}
+
+.for-you-stagger-4 {
+  animation-delay: 200ms;
+}
+
+.for-you-stagger-5 {
+  animation-delay: 250ms;
+}
+
+/* Smooth scroll behavior */
+html.for-you-active {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shift during animations */
+.for-you-locked-height {
+  min-height: 100vh;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

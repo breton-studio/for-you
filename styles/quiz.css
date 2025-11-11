@@ -1,0 +1,218 @@
+/* Quiz Modal - iOS Native Sheet Style */
+
+.for-you-quiz-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  animation: fadeIn 200ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.for-you-quiz-overlay.hiding {
+  animation: fadeOut 250ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.for-you-quiz-modal {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255, 255, 255, 1);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+  animation: modalSlideIn 300ms cubic-bezier(0.4, 0.0, 0.2, 1) 100ms forwards;
+}
+
+@media (max-width: 600px) {
+  .for-you-quiz-modal {
+    padding: 32px 24px;
+  }
+}
+
+.quiz-container {
+  text-align: center;
+}
+
+.quiz-progress {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+  letter-spacing: -0.08px;
+}
+
+.quiz-question {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: #000000;
+  margin-bottom: 32px;
+  line-height: 1.2;
+}
+
+@media (max-width: 600px) {
+  .quiz-question {
+    font-size: 24px;
+  }
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-option {
+  background: rgba(246, 246, 248, 1);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 20px 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.quiz-option:hover {
+  background: rgba(242, 242, 247, 1);
+  transform: translateX(2px);
+}
+
+.quiz-option:active {
+  transform: translateX(2px) scale(0.99);
+}
+
+.quiz-option.selected {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+.option-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: -0.2px;
+}
+
+.option-subtitle {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.7;
+  letter-spacing: -0.08px;
+  line-height: 1.4;
+}
+
+.quiz-option.selected .option-subtitle {
+  opacity: 0.8;
+}
+
+/* Done screen */
+.quiz-done {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.quiz-done h2 {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.quiz-done p {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 32px;
+  letter-spacing: -0.2px;
+}
+
+.cta-button {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: #ffffff;
+  background: #000000;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.cta-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.cta-button:active {
+  transform: scale(0.98);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .for-you-quiz-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .for-you-quiz-modal {
+    background: rgba(28, 28, 30, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .quiz-progress {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .quiz-question {
+    color: #ffffff;
+  }
+
+  .quiz-option {
+    background: rgba(58, 58, 60, 1);
+  }
+
+  .quiz-option:hover {
+    background: rgba(72, 72, 74, 1);
+  }
+
+  .quiz-option.selected {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+  }
+
+  .quiz-done h2 {
+    color: #ffffff;
+  }
+
+  .quiz-done p {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .cta-button {
+    color: #000000;
+    background: #ffffff;
+  }
+}

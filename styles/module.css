@@ -1,0 +1,239 @@
+/* For You Module - iOS 26 Native Control Style */
+
+.for-you-module {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+
+  width: 260px;
+  max-width: calc(100vw - 40px);
+  height: 48px;
+
+  /* iOS 26 module style */
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+
+  /* Snappy animations */
+  transition:
+    opacity 200ms cubic-bezier(0.4, 0.0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.for-you-module.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  pointer-events: none;
+}
+
+.for-you-text {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #000000;
+  letter-spacing: -0.24px;
+  user-select: none;
+}
+
+/* iOS toggle switch */
+.for-you-toggle {
+  position: relative;
+  width: 42px;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: background 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.for-you-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: white;
+  border-radius: 11px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.for-you-toggle.on {
+  background: #34C759; /* iOS system green */
+}
+
+.for-you-toggle.on::after {
+  transform: translateX(16px);
+}
+
+/* Dark mode - automatic system preference detection */
+@media (prefers-color-scheme: dark) {
+  .for-you-module {
+    background: rgba(28, 28, 30, 0.94);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .for-you-text {
+    color: #ffffff;
+  }
+
+  .for-you-toggle {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .for-you-toggle.on {
+    background: #32D74B;
+  }
+}
+
+/* Personalized content markers */
+.for-you-intro-section {
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: slideInTop 300ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.for-you-recommendation-card {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  animation: fadeInUp 250ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+
+  /* Card styling */
+  padding: 32px;
+  margin: 40px auto;
+  max-width: 600px;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(52, 199, 89, 0.1);
+  text-align: center;
+}
+
+.for-you-recommendation-card h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000000;
+  margin: 12px 0 8px 0;
+}
+
+.for-you-recommendation-card p {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.for-you-final-cta {
+  opacity: 0;
+  animation: fadeIn 300ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+
+  /* Section styling */
+  padding: 80px 40px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.08) 0%, rgba(52, 199, 89, 0.03) 100%);
+  margin-top: 60px;
+}
+
+.for-you-final-cta h2 {
+  font-size: 32px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0 0 24px 0;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.for-you-final-cta-button {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 16px 40px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.for-you-final-cta-button:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.for-you-final-cta-button:active {
+  transform: scale(0.98);
+}
+
+/* Dark mode for recommendation card and final CTA */
+@media (prefers-color-scheme: dark) {
+  .for-you-recommendation-card {
+    background: rgba(28, 28, 30, 0.98);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-color: rgba(50, 215, 75, 0.15);
+  }
+
+  .for-you-recommendation-card h3 {
+    color: #ffffff;
+  }
+
+  .for-you-recommendation-card p {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .for-you-final-cta {
+    background: linear-gradient(135deg, rgba(50, 215, 75, 0.12) 0%, rgba(50, 215, 75, 0.05) 100%);
+  }
+
+  .for-you-final-cta h2 {
+    color: #ffffff;
+  }
+}
+
+/* Section states */
+.for-you-relevant-section {
+  position: relative;
+}
+
+.for-you-low-relevance-section {
+  position: relative;
+}
+
+.for-you-hidden {
+  overflow: hidden !important;
+}
+
+/* Badges for personalized content */
+.for-you-badge {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #34C759;
+  background: rgba(52, 199, 89, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .for-you-badge {
+    color: #32D74B;
+    background: rgba(50, 215, 75, 0.15);
+  }
+}

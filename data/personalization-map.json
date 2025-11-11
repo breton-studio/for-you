@@ -1,0 +1,328 @@
+{
+  "mappings": {
+    "quick-bold-quality": {
+      "hero": {
+        "headlinePattern": "Premium {offering} Ready Now",
+        "subheadlinePattern": "Bold excellence, no waiting",
+        "bodyPattern": "Instant access to the best {service}"
+      },
+      "cta": "Get Started Today",
+      "recommendationCard": {
+        "title": "Perfect for quick decisions",
+        "description": "Premium quality without the wait"
+      }
+    },
+    "quick-bold-personal": {
+      "hero": {
+        "headlinePattern": "Your Bold Statement Awaits",
+        "subheadlinePattern": "Striking and meaningful",
+        "bodyPattern": "Make it personal, make it powerful"
+      },
+      "cta": "Start Your Journey",
+      "recommendationCard": {
+        "title": "Bold personal expression",
+        "description": "Stand out with intention"
+      }
+    },
+    "quick-bold-new": {
+      "hero": {
+        "headlinePattern": "Discover Bold Possibilities",
+        "subheadlinePattern": "Fresh, fearless, fast",
+        "bodyPattern": "New experiences that make an impact"
+      },
+      "cta": "Explore Now",
+      "recommendationCard": {
+        "title": "For the adventurous",
+        "description": "Bold choices, exciting outcomes"
+      }
+    },
+    "quick-minimal-quality": {
+      "hero": {
+        "headlinePattern": "Refined Excellence",
+        "subheadlinePattern": "Simple. Premium. Immediate.",
+        "bodyPattern": "Clean quality you can trust"
+      },
+      "cta": "Get Started",
+      "recommendationCard": {
+        "title": "Minimal, maximum impact",
+        "description": "Quality without the clutter"
+      }
+    },
+    "quick-minimal-personal": {
+      "hero": {
+        "headlinePattern": "Your Story, Simplified",
+        "subheadlinePattern": "Clean lines, deep meaning",
+        "bodyPattern": "Personal expression, perfectly minimal"
+      },
+      "cta": "Begin",
+      "recommendationCard": {
+        "title": "Elegantly personal",
+        "description": "Less noise, more you"
+      }
+    },
+    "quick-minimal-new": {
+      "hero": {
+        "headlinePattern": "Fresh Simplicity",
+        "subheadlinePattern": "New and uncluttered",
+        "bodyPattern": "Clean slate for new experiences"
+      },
+      "cta": "Discover",
+      "recommendationCard": {
+        "title": "Modern minimalism",
+        "description": "New paths, clear direction"
+      }
+    },
+    "quick-warm-quality": {
+      "hero": {
+        "headlinePattern": "Welcome to Excellence",
+        "subheadlinePattern": "Premium care, instant warmth",
+        "bodyPattern": "Quality service that feels like home"
+      },
+      "cta": "Come In",
+      "recommendationCard": {
+        "title": "Welcoming quality",
+        "description": "Premium without pretense"
+      }
+    },
+    "quick-warm-personal": {
+      "hero": {
+        "headlinePattern": "Your Home for Meaning",
+        "subheadlinePattern": "Warmth meets intention",
+        "bodyPattern": "Personal connections that feel right"
+      },
+      "cta": "Connect",
+      "recommendationCard": {
+        "title": "Cozy and meaningful",
+        "description": "Where comfort meets purpose"
+      }
+    },
+    "quick-warm-new": {
+      "hero": {
+        "headlinePattern": "Discover Comfort",
+        "subheadlinePattern": "New experiences, familiar feeling",
+        "bodyPattern": "Explore in a welcoming space"
+      },
+      "cta": "Step Inside",
+      "recommendationCard": {
+        "title": "Welcoming exploration",
+        "description": "Try something new, feel at home"
+      }
+    },
+    "researched-bold-quality": {
+      "hero": {
+        "headlinePattern": "Uncompromising Excellence",
+        "subheadlinePattern": "Bold quality backed by expertise",
+        "bodyPattern": "Research the difference, see the impact"
+      },
+      "cta": "Explore Our Work",
+      "recommendationCard": {
+        "title": "Bold and proven",
+        "description": "Dramatic results you can trust"
+      }
+    },
+    "researched-bold-personal": {
+      "hero": {
+        "headlinePattern": "Your Story, Amplified",
+        "subheadlinePattern": "Bold expression with depth",
+        "bodyPattern": "Meaningful impact, thoroughly considered"
+      },
+      "cta": "Learn More",
+      "recommendationCard": {
+        "title": "Bold personal narrative",
+        "description": "Stand out with substance"
+      }
+    },
+    "researched-bold-new": {
+      "hero": {
+        "headlinePattern": "Explore Bold Innovations",
+        "subheadlinePattern": "New approaches, proven process",
+        "bodyPattern": "Discover groundbreaking possibilities"
+      },
+      "cta": "See What's New",
+      "recommendationCard": {
+        "title": "Innovative and thorough",
+        "description": "Bold ideas, careful execution"
+      }
+    },
+    "researched-minimal-quality": {
+      "hero": {
+        "headlinePattern": "Thoughtfully Crafted Excellence",
+        "subheadlinePattern": "Clean design, deep expertise",
+        "bodyPattern": "Every detail considered for quality"
+      },
+      "cta": "Explore Our Process",
+      "recommendationCard": {
+        "title": "Minimal perfection",
+        "description": "Simplicity backed by expertise"
+      }
+    },
+    "researched-minimal-personal": {
+      "hero": {
+        "headlinePattern": "Thoughtfully Crafted {offering}",
+        "subheadlinePattern": "Clean design with personal meaning",
+        "bodyPattern": "Every detail considered for your story"
+      },
+      "cta": "Explore Your Options",
+      "recommendationCard": {
+        "title": "Curated for thoughtful choices",
+        "description": "Minimal aesthetics with deep personal connection"
+      }
+    },
+    "researched-minimal-new": {
+      "hero": {
+        "headlinePattern": "Fresh Perspectives",
+        "subheadlinePattern": "New ideas, timeless clarity",
+        "bodyPattern": "Explore innovative simplicity"
+      },
+      "cta": "Learn More",
+      "recommendationCard": {
+        "title": "Modern and considered",
+        "description": "New approaches, proven principles"
+      }
+    },
+    "researched-warm-quality": {
+      "hero": {
+        "headlinePattern": "Excellence That Welcomes",
+        "subheadlinePattern": "Premium quality, personal approach",
+        "bodyPattern": "Expertise delivered with care"
+      },
+      "cta": "Explore Our Approach",
+      "recommendationCard": {
+        "title": "Warm expertise",
+        "description": "Quality with a human touch"
+      }
+    },
+    "researched-warm-personal": {
+      "hero": {
+        "headlinePattern": "Your Meaningful Journey",
+        "subheadlinePattern": "Personal connections, thoughtful process",
+        "bodyPattern": "Explore options with guidance and care"
+      },
+      "cta": "Start a Conversation",
+      "recommendationCard": {
+        "title": "Personally guided",
+        "description": "Meaningful choices, warm support"
+      }
+    },
+    "researched-warm-new": {
+      "hero": {
+        "headlinePattern": "Discover with Confidence",
+        "subheadlinePattern": "New possibilities, welcoming guidance",
+        "bodyPattern": "Explore innovations in a comfortable space"
+      },
+      "cta": "Learn What's New",
+      "recommendationCard": {
+        "title": "Guided discovery",
+        "description": "New experiences, friendly expertise"
+      }
+    },
+    "expert-bold-quality": {
+      "hero": {
+        "headlinePattern": "Master-Level Excellence",
+        "subheadlinePattern": "Bold results from proven experts",
+        "bodyPattern": "Trust our expertise for dramatic impact"
+      },
+      "cta": "Meet Our Experts",
+      "recommendationCard": {
+        "title": "Expert boldness",
+        "description": "Dramatic quality from masters"
+      }
+    },
+    "expert-bold-personal": {
+      "hero": {
+        "headlinePattern": "Your Vision, Expert Hands",
+        "subheadlinePattern": "Bold personal expression with guidance",
+        "bodyPattern": "Let our experts amplify your story"
+      },
+      "cta": "Start Your Consultation",
+      "recommendationCard": {
+        "title": "Guided boldness",
+        "description": "Expert help for personal impact"
+      }
+    },
+    "expert-bold-new": {
+      "hero": {
+        "headlinePattern": "Pioneering Excellence",
+        "subheadlinePattern": "Bold innovations from industry leaders",
+        "bodyPattern": "Expert guidance into new territory"
+      },
+      "cta": "Explore With Experts",
+      "recommendationCard": {
+        "title": "Expert innovation",
+        "description": "Bold new paths with proven guides"
+      }
+    },
+    "expert-minimal-quality": {
+      "hero": {
+        "headlinePattern": "Refined by Experts",
+        "subheadlinePattern": "Clean excellence, master crafted",
+        "bodyPattern": "Trust our expertise for perfect simplicity"
+      },
+      "cta": "See Our Work",
+      "recommendationCard": {
+        "title": "Expert simplicity",
+        "description": "Masters of minimal excellence"
+      }
+    },
+    "expert-minimal-personal": {
+      "hero": {
+        "headlinePattern": "Your Story, Expert Touch",
+        "subheadlinePattern": "Personal meaning, professional guidance",
+        "bodyPattern": "Let experts help you find clarity"
+      },
+      "cta": "Book a Consultation",
+      "recommendationCard": {
+        "title": "Expertly personal",
+        "description": "Meaningful simplicity with guidance"
+      }
+    },
+    "expert-minimal-new": {
+      "hero": {
+        "headlinePattern": "Expert-Led Discovery",
+        "subheadlinePattern": "New paths, clear guidance",
+        "bodyPattern": "Explore innovations with expert insight"
+      },
+      "cta": "Learn From Experts",
+      "recommendationCard": {
+        "title": "Guided innovation",
+        "description": "New directions, expert clarity"
+      }
+    },
+    "expert-warm-quality": {
+      "hero": {
+        "headlinePattern": "Excellence with Heart",
+        "subheadlinePattern": "Expert quality, personal care",
+        "bodyPattern": "Trust our team for premium results"
+      },
+      "cta": "Meet the Team",
+      "recommendationCard": {
+        "title": "Warm expertise",
+        "description": "Professional excellence, personal touch"
+      }
+    },
+    "expert-warm-personal": {
+      "hero": {
+        "headlinePattern": "Your Journey, Our Guidance",
+        "subheadlinePattern": "Personal meaning with expert support",
+        "bodyPattern": "Let our team help tell your story"
+      },
+      "cta": "Start a Conversation",
+      "recommendationCard": {
+        "title": "Personally guided",
+        "description": "Meaningful connections with experts"
+      }
+    },
+    "expert-warm-new": {
+      "hero": {
+        "headlinePattern": "Discover Something Special",
+        "subheadlinePattern": "Expert guidance in a welcoming space",
+        "bodyPattern": "Let our experts help you explore new possibilities"
+      },
+      "cta": "Meet Our Experts",
+      "recommendationCard": {
+        "title": "Guided exploration",
+        "description": "Professional expertise with a warm, approachable touch"
+      }
+    }
+  }
+}
