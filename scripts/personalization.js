@@ -1037,6 +1037,273 @@ const ForYouPersonalization = {
     }
   },
 
+  // Detect repeated items in a section using generic pattern matching
+  detectRepeatedItems(section) {
+    // Get all direct children of the section
+    let children = Array.from(section.children).filter(child => {
+      // Filter out injected For You elements and very small elements
+      return !child.classList.contains('for-you-intro-section') &&
+             !child.classList.contains('for-you-final-cta') &&
+             child.offsetHeight > 20;
+    });
+
+    console.log(`For You: Section has ${children.length} direct children`);
+
+    // If not enough direct children, try looking one level deeper
+    if (children.length < 7) {
+      console.log(`For You: Not enough direct children (${children.length} < 7), checking nested structure`);
+
+      // Look for container with many children (common pattern: section > container > items)
+      const containers = Array.from(section.children).filter(child => child.children.length >= 7);
+
+      if (containers.length > 0) {
+        // Use the container with the most children
+        const largestContainer = containers.reduce((max, container) =>
+          container.children.length > max.children.length ? container : max
+        );
+
+        children = Array.from(largestContainer.children).filter(child => {
+          return !child.classList.contains('for-you-intro-section') &&
+                 !child.classList.contains('for-you-final-cta') &&
+                 child.offsetHeight > 20;
+        });
+
+        console.log(`For You: Found nested container with ${children.length} children`);
+      }
+    }
+
+    if (children.length < 7) {
+      // Need at least 7 items to consider filtering
+      console.log(`For You: Not enough children (${children.length} < 7), skipping`);
+      return [];
+    }
+
+    // Create structural signatures for each child
+    const signatures = children.map(child => {
+      const childElements = child.querySelectorAll('*');
+
+      return {
+        element: child,
+        signature: {
+          tagName: child.tagName.toLowerCase(),
+          childCount: child.children.length,
+          hasImage: child.querySelector('img') !== null,
+          hasHeading: child.querySelector('h1, h2, h3, h4, h5, h6') !== null,
+          hasLink: child.querySelector('a') !== null,
+          hasButton: child.querySelector('button, .button, .btn') !== null,
+          textLength: Math.floor(child.textContent.trim().length / 50) * 50, // Bucketed
+          classList: Array.from(child.classList).sort().join(' ')
+        }
+      };
+    });
+
+    // Group by similar signatures
+    const groups = {};
+    signatures.forEach(({element, signature}) => {
+      const key = JSON.stringify(signature);
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(element);
+    });
+
+    console.log(`For You: Found ${Object.keys(groups).length} unique structural patterns`);
+
+    // Find the largest group
+    let largestGroup = [];
+    let largestGroupSignature = null;
+    Object.entries(groups).forEach(([key, group]) => {
+      if (group.length > largestGroup.length) {
+        largestGroup = group;
+        largestGroupSignature = JSON.parse(key);
+      }
+    });
+
+    console.log(`For You: Largest group has ${largestGroup.length} items`);
+    if (largestGroupSignature) {
+      console.log(`For You: Pattern:`, largestGroupSignature);
+    }
+
+    // Return the largest group if it has 7+ items
+    if (largestGroup.length >= 7) {
+      return largestGroup;
+    } else {
+      console.log(`For You: Largest group too small (${largestGroup.length} < 7), no filtering needed`);
+      return [];
+    }
+  },
+
+  // Calculate relevance score for a repeated item
+  calculateItemRelevance(item, index, sectionType, preferences) {
+    let score = 50; // Base score
+
+    // Factor 1: Image presence (high signal for visual content)
+    const hasImage = item.querySelector('img') !== null;
+    if (hasImage) {
+      score += 20;
+
+      // Bonus for larger images
+      const img = item.querySelector('img');
+      if (img && img.offsetWidth > 200) {
+        score += 5;
+      }
+    }
+
+    // Factor 2: Text quality (substantial content)
+    const textContent = item.textContent.trim();
+    const textLength = textContent.length;
+
+    if (textLength > 100) score += 15;
+    if (textLength > 200) score += 10;
+    if (textLength > 400) score += 5;
+
+    // Factor 3: Position bias (first items often most important/featured)
+    if (index < 3) {
+      score += 15; // Top 3 items
+    } else if (index < 6) {
+      score += 5;  // Top 6 items
+    }
+
+    // Factor 4: Featured indicators
+    if (item.classList.contains('featured') || item.classList.contains('highlight')) {
+      score += 25;
+    }
+
+    // Factor 5: Interactive elements
+    const hasLink = item.querySelector('a') !== null;
+    const hasButton = item.querySelector('button, .button, .btn') !== null;
+
+    if (hasLink) score += 10;
+    if (hasButton) score += 15;
+
+    // Factor 6: Preference alignment
+    if (preferences) {
+      if (preferences.priority === 'quality-craft') {
+        // Favor items with longer descriptions and portfolio indicators
+        if (textLength > 150) score += 15;
+        if (textContent.toLowerCase().includes('portfolio') ||
+            textContent.toLowerCase().includes('work')) {
+          score += 10;
+        }
+      } else if (preferences.priority === 'personal-connection') {
+        // Favor items with bio/story content
+        if (textContent.toLowerCase().includes('bio') ||
+            textContent.toLowerCase().includes('story') ||
+            textContent.toLowerCase().includes('about')) {
+          score += 20;
+        }
+        // Favor personal photos (headshots tend to be square-ish)
+        if (hasImage) {
+          const img = item.querySelector('img');
+          if (img && Math.abs(img.offsetWidth - img.offsetHeight) < 50) {
+            score += 10; // Square-ish image (likely headshot)
+          }
+        }
+      } else if (preferences.priority === 'something-new') {
+        // Favor items with dates, "new" indicators
+        if (textContent.toLowerCase().includes('new') ||
+            textContent.toLowerCase().includes('recent') ||
+            textContent.toLowerCase().includes('2024') ||
+            textContent.toLowerCase().includes('2025')) {
+          score += 15;
+        }
+      }
+
+      // Visual style adjustments
+      if (preferences.visualStyle === 'bold-dramatic' && hasImage) {
+        score += 10; // Favor visual items
+      } else if (preferences.visualStyle === 'clean-minimal' && textLength < 150) {
+        score += 5; // Favor concise items
+      }
+
+      // Decision style adjustments
+      if (preferences.decisionStyle === 'quick-intuitive' && (hasButton || hasLink)) {
+        score += 10; // Favor actionable items
+      }
+    }
+
+    return score;
+  },
+
+  // Hide a repeated item with animation
+  async hideRepeatedItem(item) {
+    // Store original state
+    item.dataset.forYouOriginalDisplay = getComputedStyle(item).display;
+    item.dataset.forYouOriginalHeight = item.offsetHeight + 'px';
+    item.dataset.forYouOriginalMargin = JSON.stringify({
+      top: getComputedStyle(item).marginTop,
+      bottom: getComputedStyle(item).marginBottom,
+      left: getComputedStyle(item).marginLeft,
+      right: getComputedStyle(item).marginRight
+    });
+    item.dataset.forYouHiddenItem = 'true';
+
+    // Apply smooth collapse animation
+    item.style.transition = `
+      max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      margin 400ms cubic-bezier(0.4, 0, 0.2, 1),
+      transform 300ms cubic-bezier(0.4, 0, 0.2, 1)
+    `;
+    item.style.overflow = 'hidden';
+    item.style.maxHeight = item.offsetHeight + 'px';
+
+    // Force reflow
+    item.offsetHeight;
+
+    // Animate collapse
+    item.style.maxHeight = '0';
+    item.style.opacity = '0';
+    item.style.marginTop = '0';
+    item.style.marginBottom = '0';
+    item.style.marginLeft = '0';
+    item.style.marginRight = '0';
+    item.style.transform = 'scale(0.95)';
+
+    // Wait for animation
+    await this.wait(400);
+
+    // Fully hide
+    item.style.display = 'none';
+  },
+
+  // Filter repeated content in a section (keep top 3 of 6+)
+  async filterRepeatedContent(section, sectionType, preferences) {
+    // Detect repeated items using generic pattern matching
+    const items = this.detectRepeatedItems(section);
+
+    // Early return if not enough items to filter
+    if (items.length <= 6) {
+      return;
+    }
+
+    console.log(`For You: Found ${items.length} repeated items in ${sectionType} section`);
+
+    // Score all items
+    const scoredItems = items.map((item, index) => ({
+      element: item,
+      score: this.calculateItemRelevance(item, index, sectionType, preferences),
+      originalIndex: index
+    }));
+
+    // Sort by score (descending)
+    scoredItems.sort((a, b) => b.score - a.score);
+
+    // Keep top 3, hide rest
+    const itemsToKeep = scoredItems.slice(0, 3);
+    const itemsToHide = scoredItems.slice(3);
+
+    console.log(`For You: Keeping top 3 items (scores: ${itemsToKeep.map(i => i.score).join(', ')})`);
+    console.log(`For You: Hiding ${itemsToHide.length} items`);
+
+    // Hide items with staggered timing for smooth animation
+    for (let i = 0; i < itemsToHide.length; i++) {
+      setTimeout(() => {
+        this.hideRepeatedItem(itemsToHide[i].element);
+      }, i * 30); // Stagger by 30ms
+    }
+  },
+
   // Calculate length constraints for an element
   calculateLengthConstraints(element, originalText) {
     const constraints = {
@@ -1822,7 +2089,27 @@ const ForYouPersonalization = {
       await this.applyAPIModifications(modifications);
 
       // 5. Reorder and collapse sections (starts at 700ms)
-      setTimeout(() => this.reorderPageSections(preferences), 700);
+      setTimeout(async () => {
+        await this.reorderPageSections(preferences);
+
+        // 6. Filter repeated content within sections (after reordering completes)
+        await this.wait(500); // Wait for reordering animations to settle
+
+        const sections = this.findAllElements(this.SELECTORS.sections);
+        console.log(`For You: Checking ${sections.length} sections for repeated content`);
+
+        for (const section of sections) {
+          // Skip hidden sections
+          if (section.classList.contains('for-you-hidden')) {
+            continue;
+          }
+
+          const sectionType = this.detectSectionType(section);
+          await this.filterRepeatedContent(section, sectionType, preferences);
+        }
+
+        console.log('For You: Content filtering complete');
+      }, 700);
 
       console.log('For You: AI transformation complete');
 
@@ -1917,6 +2204,42 @@ const ForYouPersonalization = {
     // Remove all injected elements
     const injectedElements = document.querySelectorAll('[data-for-you-element="true"]');
     injectedElements.forEach(element => element.remove());
+
+    // Restore filtered/hidden items
+    const hiddenItems = document.querySelectorAll('[data-for-you-hidden-item="true"]');
+    console.log(`For You: Restoring ${hiddenItems.length} hidden items`);
+
+    hiddenItems.forEach((item, index) => {
+      setTimeout(() => {
+        const originalMargin = item.dataset.forYouOriginalMargin ?
+          JSON.parse(item.dataset.forYouOriginalMargin) : {};
+
+        // Restore display first
+        item.style.display = item.dataset.forYouOriginalDisplay || '';
+
+        // Animate restoration
+        setTimeout(() => {
+          item.style.maxHeight = item.dataset.forYouOriginalHeight || 'none';
+          item.style.opacity = '1';
+          item.style.marginTop = originalMargin.top || '';
+          item.style.marginBottom = originalMargin.bottom || '';
+          item.style.marginLeft = originalMargin.left || '';
+          item.style.marginRight = originalMargin.right || '';
+          item.style.transform = '';
+
+          // Cleanup after animation
+          setTimeout(() => {
+            item.style.transition = '';
+            item.style.overflow = '';
+            item.style.maxHeight = '';
+            delete item.dataset.forYouOriginalDisplay;
+            delete item.dataset.forYouOriginalHeight;
+            delete item.dataset.forYouOriginalMargin;
+            delete item.dataset.forYouHiddenItem;
+          }, 400);
+        }, 50);
+      }, index * 30); // Stagger restoration
+    });
 
     // Restore sections
     await this.wait(modifiedElements.length * 30 + 200); // Wait for text restoration
