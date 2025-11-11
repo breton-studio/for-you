@@ -201,28 +201,37 @@ const ForYouQuiz = {
       console.log('[For You] Site analysis still in progress');
       console.log('[For You] Waiting for completion to ensure accurate personalization...');
 
-      // Show brief loading state
-      if (window.ForYouCrawlProgress) {
-        window.ForYouCrawlProgress.showWaiting();
+      // Update debug overlay instead of showing modal
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('waiting', 'Waiting: Analysis to complete');
       }
 
       // Wait for crawl to complete
       await window.ForYouCrawl.wait();
 
-      // Hide loading state
-      if (window.ForYouCrawlProgress) {
-        window.ForYouCrawlProgress.hide();
+      // Update debug overlay
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.remove('waiting');
+        window.ForYouDebugOverlay.update('status', 'Status: Transforming page');
       }
 
       console.log('[For You] Analysis complete. Proceeding with full site profile.');
       console.log('');
     } else {
       console.log('[For You] Brand materials ready. Beginning transformation.');
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('status', 'Status: Transforming page');
+      }
     }
 
     // Trigger page transformation (with full profile if crawl completed, or current page if not)
     if (window.ForYouPersonalization) {
       await window.ForYouPersonalization.executeTransformation(this.answers);
+    }
+
+    // Update debug overlay
+    if (window.ForYouDebugOverlay) {
+      window.ForYouDebugOverlay.update('status', 'Status: Personalization active');
     }
 
     // Update module toggle state

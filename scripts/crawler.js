@@ -219,7 +219,7 @@ const ForYouCrawler = {
   async fetchPages(urls, config) {
     const pages = [];
     const queue = [...urls];
-    const inProgress = [];
+    const inProgress = new Map(); // Map promise -> { urlData, completed: boolean }
     let completed = 0;
     let succeeded = 0;
     let failed = 0;
@@ -235,14 +235,16 @@ const ForYouCrawler = {
       console.log(`[ForYouCrawler] Progress: ${completed}/${urls.length} pages (${progress}%)`);
     };
 
-    while (queue.length > 0 || inProgress.length > 0) {
+    while (queue.length > 0 || inProgress.size > 0) {
       // Start new requests up to maxConcurrent
-      while (inProgress.length < config.maxConcurrent && queue.length > 0) {
+      while (inProgress.size < config.maxConcurrent && queue.length > 0) {
         const urlData = queue.shift();
         const urlShort = urlData.url.replace(window.location.origin, '');
 
         // Yield before starting each fetch to prevent blocking
         await this.yieldToEventLoop();
+
+        const promiseInfo = { urlData, completed: false };
 
         const promise = this.fetchPage(urlData, config)
           .then(async (page) => {
@@ -252,6 +254,7 @@ const ForYouCrawler = {
               console.log(`[ForYouCrawler]   Fetched [${page.type}]: ${urlShort} (${page.wordCount} words)`);
             }
             completed++;
+            promiseInfo.completed = true;
             emitProgress();
 
             // Yield to event loop after each page to keep browser responsive
@@ -263,6 +266,7 @@ const ForYouCrawler = {
             failed++;
             console.warn(`[ForYouCrawler]   Failed [${urlData.type}]: ${urlShort} - ${error.message}`);
             completed++;
+            promiseInfo.completed = true;
             emitProgress();
 
             // Yield even on error
@@ -271,7 +275,7 @@ const ForYouCrawler = {
             return null;
           });
 
-        inProgress.push(promise);
+        inProgress.set(promise, promiseInfo);
 
         // Rate limiting delay
         if (queue.length > 0) {
@@ -279,17 +283,15 @@ const ForYouCrawler = {
         }
       }
 
-      // Wait for at least one to complete
-      if (inProgress.length > 0) {
-        await Promise.race(inProgress);
-        // Remove completed promises
-        for (let i = inProgress.length - 1; i >= 0; i--) {
-          const settled = await Promise.race([
-            inProgress[i].then(() => true),
-            Promise.resolve(false)
-          ]);
-          if (settled) {
-            inProgress.splice(i, 1);
+      // Wait for at least one to complete and remove completed ones
+      if (inProgress.size > 0) {
+        // Wait for any to complete
+        await Promise.race(Array.from(inProgress.keys()));
+
+        // Remove all completed promises
+        for (const [promise, info] of Array.from(inProgress.entries())) {
+          if (info.completed) {
+            inProgress.delete(promise);
           }
         }
       }
