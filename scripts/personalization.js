@@ -4,6 +4,7 @@ const ForYouPersonalization = {
   brandStyles: null,
   siteType: null,
   isSquarespace: false,
+  cachedBusinessProfile: null,  // Cache business profile to avoid recomputation
 
   // Universal Squarespace selectors
   SELECTORS: {
@@ -61,6 +62,17 @@ const ForYouPersonalization = {
     return this.isSquarespace;
   },
 
+  // Utility: Yield to event loop to prevent blocking
+  async yieldToEventLoop() {
+    return new Promise(resolve => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => resolve(), { timeout: 50 });
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+  },
+
   // Find element with fallbacks
   findElement(selectorArray) {
     for (const selector of selectorArray) {
@@ -93,7 +105,7 @@ const ForYouPersonalization = {
       professional: ['services', 'expertise', 'team', 'about us']
     };
 
-    const bodyText = document.body.innerText.toLowerCase();
+    const bodyText = document.body.textContent.toLowerCase();
     const metaDescription = document.querySelector('meta[name="description"]')?.content.toLowerCase() || '';
     const searchText = bodyText + ' ' + metaDescription;
 
@@ -193,7 +205,7 @@ const ForYouPersonalization = {
     let score = 50; // Start neutral (mid tier)
 
     // 1. Language/keyword analysis
-    const bodyText = document.body.innerText.toLowerCase();
+    const bodyText = document.body.textContent.toLowerCase();
 
     // Premium indicators (+points)
     const premiumWords = [
@@ -1751,7 +1763,9 @@ const ForYouPersonalization = {
     // Scan all sections
     const sections = this.findAllElements(this.SELECTORS.sections);
 
-    sections.forEach(section => {
+    // Process sections with yielding to keep browser responsive
+    let processedCount = 0;
+    for (const section of sections) {
       const sectionType = this.detectSectionType(section);
 
       // Classify headings
@@ -1815,7 +1829,13 @@ const ForYouPersonalization = {
           });
         }
       });
-    });
+
+      // Yield to event loop every 5 sections to keep page responsive
+      processedCount++;
+      if (processedCount % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
 
     console.log('For You: Page audit complete', {
       headings: inventory.headings.length,
@@ -2086,8 +2106,18 @@ const ForYouPersonalization = {
     console.log('For You: Starting AI-powered transformation', preferences);
 
     try {
-      // 0. Build business profile
-      const businessProfile = this.buildBusinessProfile();
+      // 0. Build business profile (enhanced if content inventory available)
+      let businessProfile = this.buildBusinessProfile();
+
+      // Check if we have cached content inventory for enhanced profiling
+      const siteKey = ForYouStorage.getSiteKey();
+      const contentInventory = await ForYouStorage.getContentInventory(siteKey);
+
+      if (contentInventory) {
+        console.log('For You: Using enhanced business profile with multi-page inventory');
+        businessProfile = await this.buildEnhancedBusinessProfile(contentInventory);
+      }
+
       console.log('For You: Business profile', businessProfile);
 
       // 1. Audit page content
@@ -2150,7 +2180,14 @@ const ForYouPersonalization = {
 
   // Build business profile from page content
   buildBusinessProfile() {
-    return {
+    // Return cached profile if available to avoid expensive recomputation
+    if (this.cachedBusinessProfile) {
+      console.log('[For You] Using cached business profile');
+      return this.cachedBusinessProfile;
+    }
+
+    console.log('[For You] Building business profile...');
+    const profile = {
       vertical: this.siteType || this.detectSiteType(),
       priceTier: this.detectPriceTier(),
       formality: this.detectFormality(),
@@ -2161,6 +2198,12 @@ const ForYouPersonalization = {
       },
       sampleText: this.getSampleText()
     };
+
+    // Cache for future calls
+    this.cachedBusinessProfile = profile;
+    console.log('[For You] Business profile cached');
+
+    return profile;
   },
 
   // Get sample text from page for brand voice analysis
@@ -2194,6 +2237,345 @@ const ForYouPersonalization = {
     // Join and limit to 500 chars for better LLM context
     const combined = texts.join(' ').substring(0, 500);
     return combined || '';
+  },
+
+  // Build enhanced business profile from multi-page content inventory
+  async buildEnhancedBusinessProfile(contentInventory) {
+    // Start with standard single-page profile
+    const baseProfile = this.buildBusinessProfile();
+
+    // If no inventory provided, return base profile
+    if (!contentInventory || !contentInventory.pages || contentInventory.pages.length === 0) {
+      return baseProfile;
+    }
+
+    // Yield to prevent blocking
+    await this.yieldToEventLoop();
+
+    // Enhance with multi-page insights
+    const enhanced = {
+      ...baseProfile,
+
+      // Site structure information
+      siteStructure: {
+        totalPages: contentInventory.pageCount,
+        pageTypes: this.classifyPageTypes(contentInventory),
+        totalWordCount: contentInventory.totalWordCount,
+        crawledAt: new Date(contentInventory.crawledAt).toISOString()
+      }
+    };
+
+    // Yield before each expensive operation
+    await this.yieldToEventLoop();
+    enhanced.teamInfo = await this.extractTeamInfo(contentInventory);
+
+    await this.yieldToEventLoop();
+    enhanced.catalog = await this.extractCatalog(contentInventory);
+
+    await this.yieldToEventLoop();
+    enhanced.aboutNarrative = await this.extractAboutContent(contentInventory);
+
+    await this.yieldToEventLoop();
+    enhanced.contentThemes = await this.analyzeContentThemes(contentInventory);
+
+    await this.yieldToEventLoop();
+    enhanced.valuePropsDetailed = await this.analyzeDetailedValueProps(contentInventory);
+
+    await this.yieldToEventLoop();
+    enhanced.sampleTextMultiPage = this.getMultiPageSampleText(contentInventory);
+
+    console.log('[ForYouPersonalization] Enhanced business profile built:', enhanced);
+    return enhanced;
+  },
+
+  // Classify what types of pages exist in the inventory
+  classifyPageTypes(inventory) {
+    const types = {};
+    if (inventory.byType) {
+      Object.keys(inventory.byType).forEach(type => {
+        types[type] = inventory.byType[type].length;
+      });
+    }
+    return types;
+  },
+
+  // Extract team information from team and about pages
+  async extractTeamInfo(inventory) {
+    const teamPages = [
+      ...(inventory.byType.team || []),
+      ...(inventory.byType.about || [])
+    ];
+
+    if (teamPages.length === 0) return null;
+
+    const teamInfo = {
+      hasTeamPage: inventory.byType.team && inventory.byType.team.length > 0,
+      teamHeadings: [],
+      teamDescriptions: []
+    };
+
+    for (const page of teamPages) {
+      // Collect team-related headings
+      for (const h of page.headings) {
+        if (h.level === 'h2' || h.level === 'h3') {
+          teamInfo.teamHeadings.push(h.text);
+        }
+      }
+
+      // Collect first few paragraphs as descriptions
+      teamInfo.teamDescriptions.push(...page.paragraphs.slice(0, 3));
+
+      // Yield after each page to prevent blocking
+      await this.yieldToEventLoop();
+    }
+
+    // Limit to reasonable size
+    teamInfo.teamHeadings = teamInfo.teamHeadings.slice(0, 5);
+    teamInfo.teamDescriptions = teamInfo.teamDescriptions.slice(0, 5);
+
+    return teamInfo;
+  },
+
+  // Extract services or products catalog
+  async extractCatalog(inventory) {
+    const catalogPages = [
+      ...(inventory.byType.services || []),
+      ...(inventory.byType.products || []),
+      ...(inventory.byType.portfolio || [])
+    ];
+
+    if (catalogPages.length === 0) return null;
+
+    const catalog = {
+      type: inventory.byType.products ? 'products' : 'services',
+      items: [],
+      descriptions: []
+    };
+
+    for (const page of catalogPages) {
+      // Extract service/product names from H2/H3 headings
+      for (const h of page.headings) {
+        if (h.level === 'h2' || h.level === 'h3') {
+          catalog.items.push(h.text);
+        }
+      }
+
+      // Extract descriptions
+      catalog.descriptions.push(...page.paragraphs.slice(0, 3));
+
+      // Yield after each page to prevent blocking
+      await this.yieldToEventLoop();
+    }
+
+    // Limit to reasonable size
+    catalog.items = [...new Set(catalog.items)].slice(0, 10); // Dedupe and limit
+    catalog.descriptions = catalog.descriptions.slice(0, 8);
+
+    return catalog;
+  },
+
+  // Extract about page narrative content
+  async extractAboutContent(inventory) {
+    const aboutPages = inventory.byType.about || [];
+
+    if (aboutPages.length === 0) return null;
+
+    const aboutContent = {
+      mainHeading: '',
+      paragraphs: [],
+      keyPhrases: []
+    };
+
+    for (const page of aboutPages) {
+      // Get main heading (usually H1)
+      const h1 = page.headings.find(h => h.level === 'h1');
+      if (h1 && !aboutContent.mainHeading) {
+        aboutContent.mainHeading = h1.text;
+      }
+
+      // Get first several paragraphs
+      aboutContent.paragraphs.push(...page.paragraphs.slice(0, 4));
+
+      // Yield after each page
+      await this.yieldToEventLoop();
+    }
+
+    // Limit paragraphs
+    aboutContent.paragraphs = aboutContent.paragraphs.slice(0, 6);
+
+    // Extract key phrases (words that appear frequently)
+    aboutContent.keyPhrases = await this.extractKeyPhrases(aboutContent.paragraphs.join(' '));
+
+    return aboutContent;
+  },
+
+  // Analyze recurring themes across all content
+  async analyzeContentThemes(inventory) {
+    const allText = inventory.allParagraphs.join(' ').toLowerCase();
+
+    // Yield before heavy processing
+    await this.yieldToEventLoop();
+
+    const themes = {
+      expertise: this.countThemeWords(allText, ['expert', 'experienced', 'professional', 'skilled', 'certified', 'qualified']),
+      quality: this.countThemeWords(allText, ['quality', 'premium', 'excellence', 'best', 'superior', 'exceptional']),
+      personal: this.countThemeWords(allText, ['you', 'your', 'we', 'our', 'together', 'personalized', 'custom']),
+      innovation: this.countThemeWords(allText, ['innovative', 'modern', 'cutting-edge', 'advanced', 'technology', 'new']),
+      trust: this.countThemeWords(allText, ['trust', 'reliable', 'proven', 'established', 'guarantee', 'secure'])
+    };
+
+    // Yield after processing
+    await this.yieldToEventLoop();
+
+    // Calculate dominant themes (top 3)
+    const sorted = Object.entries(themes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([theme]) => theme);
+
+    return {
+      counts: themes,
+      dominant: sorted
+    };
+  },
+
+  // Count occurrences of theme-related words
+  countThemeWords(text, keywords) {
+    let count = 0;
+    keywords.forEach(keyword => {
+      const regex = new RegExp(keyword, 'gi');
+      const matches = text.match(regex);
+      if (matches) count += matches.length;
+    });
+    return count;
+  },
+
+  // Analyze detailed value propositions from multi-page content
+  async analyzeDetailedValueProps(inventory) {
+    const allText = inventory.allParagraphs.join(' ');
+    const lowerText = allText.toLowerCase();
+
+    // Yield before heavy processing
+    await this.yieldToEventLoop();
+
+    // Run the same analysis as single-page, but with more content
+    const emphasis = {
+      quality: 0,
+      expertise: 0,
+      personal: 0,
+      speed: 0,
+      price: 0
+    };
+
+    // Quality indicators
+    const qualityWords = ['quality', 'premium', 'excellence', 'best', 'superior', 'exceptional', 'outstanding', 'finest'];
+    for (const word of qualityWords) {
+      emphasis.quality += (lowerText.match(new RegExp(word, 'g')) || []).length;
+    }
+
+    await this.yieldToEventLoop();
+
+    // Expertise indicators
+    const expertiseWords = ['expert', 'professional', 'experienced', 'certified', 'specialist', 'master', 'skilled'];
+    for (const word of expertiseWords) {
+      emphasis.expertise += (lowerText.match(new RegExp(word, 'g')) || []).length;
+    }
+
+    await this.yieldToEventLoop();
+
+    // Personal touch indicators
+    const personalWords = ['you', 'your', 'personalized', 'custom', 'tailored', 'individual', 'unique'];
+    for (const word of personalWords) {
+      emphasis.personal += (lowerText.match(new RegExp(word, 'g')) || []).length;
+    }
+
+    await this.yieldToEventLoop();
+
+    // Speed/efficiency indicators
+    const speedWords = ['fast', 'quick', 'rapid', 'efficient', 'immediate', 'instant'];
+    for (const word of speedWords) {
+      emphasis.speed += (lowerText.match(new RegExp(word, 'g')) || []).length;
+    }
+
+    await this.yieldToEventLoop();
+
+    // Price/value indicators
+    const priceWords = ['affordable', 'value', 'price', 'cost', 'budget', 'competitive'];
+    for (const word of priceWords) {
+      emphasis.price += (lowerText.match(new RegExp(word, 'g')) || []).length;
+    }
+
+    await this.yieldToEventLoop();
+
+    // Normalize scores (0-100 scale)
+    const max = Math.max(...Object.values(emphasis));
+    if (max > 0) {
+      Object.keys(emphasis).forEach(key => {
+        emphasis[key] = Math.round((emphasis[key] / max) * 100);
+      });
+    }
+
+    return emphasis;
+  },
+
+  // Extract key phrases from text
+  async extractKeyPhrases(text) {
+    const words = text.toLowerCase().split(/\s+/);
+    const frequency = {};
+
+    // Count word frequency (exclude common words)
+    const commonWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'can', 'this', 'that', 'these', 'those']);
+
+    // Process in batches to prevent blocking
+    let processedCount = 0;
+    for (const word of words) {
+      const cleaned = word.replace(/[^a-z]/g, '');
+      if (cleaned.length > 3 && !commonWords.has(cleaned)) {
+        frequency[cleaned] = (frequency[cleaned] || 0) + 1;
+      }
+
+      // Yield every 100 words to prevent blocking
+      processedCount++;
+      if (processedCount % 100 === 0) {
+        await this.yieldToEventLoop();
+      }
+    }
+
+    // Yield before final sorting
+    await this.yieldToEventLoop();
+
+    // Get top 5 most frequent words
+    return Object.entries(frequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([word]) => word);
+  },
+
+  // Get sample text from multiple pages
+  getMultiPageSampleText(inventory) {
+    const texts = [];
+
+    // Homepage hero/intro (highest priority)
+    const homepage = inventory.pages.find(p => p.type === 'homepage');
+    if (homepage && homepage.paragraphs.length > 0) {
+      texts.push(homepage.paragraphs[0]);
+    }
+
+    // About page opening
+    const aboutPage = (inventory.byType.about || [])[0];
+    if (aboutPage && aboutPage.paragraphs.length > 0) {
+      texts.push(aboutPage.paragraphs[0]);
+    }
+
+    // Services/products description
+    const catalogPage = (inventory.byType.services || inventory.byType.products || [])[0];
+    if (catalogPage && catalogPage.paragraphs.length > 0) {
+      texts.push(catalogPage.paragraphs[0]);
+    }
+
+    // Limit to 800 chars total
+    const combined = texts.join(' ').substring(0, 800);
+    return combined || inventory.allParagraphs.slice(0, 3).join(' ').substring(0, 800);
   },
 
   // Remove all personalization

@@ -91,6 +91,126 @@ const ForYouStorage = {
       console.error('For You: Error getting site state', error);
       return null;
     }
+  },
+
+  // Save content inventory for a site
+  async saveContentInventory(siteKey, inventory) {
+    try {
+      const key = `forYouInventory_${siteKey}`;
+      const data = {
+        inventory: inventory,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
+      };
+
+      await chrome.storage.local.set({ [key]: data });
+      console.log(`For You: Content inventory saved for ${siteKey}`, inventory);
+      return true;
+    } catch (error) {
+      console.error('For You: Error saving content inventory', error);
+      return false;
+    }
+  },
+
+  // Get content inventory for a site
+  async getContentInventory(siteKey) {
+    try {
+      const key = `forYouInventory_${siteKey}`;
+      const result = await chrome.storage.local.get([key]);
+      const data = result[key];
+
+      if (!data) {
+        console.log(`For You: No cached inventory for ${siteKey}`);
+        return null;
+      }
+
+      // Check if cache has expired
+      if (Date.now() > data.expiresAt) {
+        console.log(`For You: Cached inventory expired for ${siteKey}`);
+        await this.clearContentInventory(siteKey);
+        return null;
+      }
+
+      console.log(`For You: Using cached inventory for ${siteKey}`);
+      return data.inventory;
+
+    } catch (error) {
+      console.error('For You: Error getting content inventory', error);
+      return null;
+    }
+  },
+
+  // Check if content inventory exists and is valid
+  async hasValidContentInventory(siteKey) {
+    const inventory = await this.getContentInventory(siteKey);
+    return inventory !== null && inventory.pageCount > 0;
+  },
+
+  // Clear content inventory for a site
+  async clearContentInventory(siteKey) {
+    try {
+      const key = `forYouInventory_${siteKey}`;
+      await chrome.storage.local.remove([key]);
+      console.log(`For You: Content inventory cleared for ${siteKey}`);
+      return true;
+    } catch (error) {
+      console.error('For You: Error clearing content inventory', error);
+      return false;
+    }
+  },
+
+  // Get storage usage stats
+  async getStorageStats() {
+    try {
+      const usage = await chrome.storage.local.getBytesInUse();
+      const quota = chrome.storage.local.QUOTA_BYTES || 5242880; // 5MB default
+      return {
+        used: usage,
+        quota: quota,
+        available: quota - usage,
+        percentUsed: (usage / quota) * 100
+      };
+    } catch (error) {
+      console.error('For You: Error getting storage stats', error);
+      return null;
+    }
+  },
+
+  // Clear expired inventories to free up space
+  async clearExpiredInventories() {
+    try {
+      const allData = await chrome.storage.local.get(null);
+      const now = Date.now();
+      const keysToRemove = [];
+
+      for (const [key, value] of Object.entries(allData)) {
+        if (key.startsWith('forYouInventory_') && value.expiresAt && now > value.expiresAt) {
+          keysToRemove.push(key);
+        }
+      }
+
+      if (keysToRemove.length > 0) {
+        await chrome.storage.local.remove(keysToRemove);
+        console.log(`For You: Cleared ${keysToRemove.length} expired inventories`);
+      }
+
+      return keysToRemove.length;
+    } catch (error) {
+      console.error('For You: Error clearing expired inventories', error);
+      return 0;
+    }
+  },
+
+  // Generate site key from URL
+  getSiteKey(url = window.location.href) {
+    try {
+      const urlObj = new URL(url);
+      // Use hostname as site key (e.g., "example.com")
+      return urlObj.hostname.replace(/^www\./, '');
+    } catch (error) {
+      console.error('For You: Error generating site key', error);
+      return 'unknown';
+    }
   }
 };
 

@@ -195,7 +195,32 @@ const ForYouQuiz = {
     // Dismiss modal
     await this.dismiss();
 
-    // Trigger page transformation
+    // Check if background crawl is still in progress
+    if (window.ForYouCrawl && window.ForYouCrawl.isInProgress()) {
+      console.log('');
+      console.log('[For You] Site analysis still in progress');
+      console.log('[For You] Waiting for completion to ensure accurate personalization...');
+
+      // Show brief loading state
+      if (window.ForYouCrawlProgress) {
+        window.ForYouCrawlProgress.showWaiting();
+      }
+
+      // Wait for crawl to complete
+      await window.ForYouCrawl.wait();
+
+      // Hide loading state
+      if (window.ForYouCrawlProgress) {
+        window.ForYouCrawlProgress.hide();
+      }
+
+      console.log('[For You] Analysis complete. Proceeding with full site profile.');
+      console.log('');
+    } else {
+      console.log('[For You] Brand materials ready. Beginning transformation.');
+    }
+
+    // Trigger page transformation (with full profile if crawl completed, or current page if not)
     if (window.ForYouPersonalization) {
       await window.ForYouPersonalization.executeTransformation(this.answers);
     }

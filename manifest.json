@@ -20,6 +20,9 @@
       "matches": ["<all_urls>"],
       "js": [
         "scripts/storage.js",
+        "scripts/crawler.js",
+        "scripts/crawl-progress.js",
+        "scripts/debug-overlay.js",
         "scripts/personalization.js",
         "scripts/quiz.js",
         "content.js"
@@ -27,9 +30,10 @@
       "css": [
         "styles/module.css",
         "styles/quiz.css",
-        "styles/animations.css"
+        "styles/animations.css",
+        "styles/crawl-progress.css"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_end"
     }
   ],
   "action": {
