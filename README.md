@@ -1,294 +1,241 @@
-# For You - Personalization Demo Extension
+# For You
+**Personalization that feels human**
 
-A Chrome extension prototype demonstrating the "For You" cross-site personalization feature for Squarespace sites, specifically targeting [Atelier Eva](https://www.ateliereva.com/).
+> Simple. Warm. Perfect.
 
-## 🎯 Project Goal
-
-Demonstrate how user preferences can transform generic web experiences into personalized ones that drive conversion. Built for Hackweek to create a compelling demo that gets execs saying "when can we ship this?"
-
-## ✨ Features
-
-- **Smart Quiz**: 4-question visual quiz that captures user preferences
-- **Dynamic Personalization**: Transforms page content based on preferences
-  - Personalized headlines and copy
-  - Recommended artist matching
-  - Custom color palettes
-  - Targeted CTAs
-- **Smooth Animations**: Choreographed 2.5-second transformation sequence
-- **Persistent State**: Preferences saved across sessions
-- **Scroll-Aware UI**: Module elegantly hides/shows based on scroll
-
-## 📦 Installation
-
-### Step 1: Load the Extension
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (toggle in top-right corner)
-3. Click **Load unpacked**
-4. Select the `for-you` directory
-5. The extension should now appear in your extensions list
-
-### Step 2: Pin the Extension (Optional)
-
-1. Click the puzzle piece icon in Chrome toolbar
-2. Find "For You - Personalization Demo"
-3. Click the pin icon to keep it visible
-
-## 🚀 Usage
-
-### First Time Experience
-
-1. Navigate to [https://www.ateliereva.com/](https://www.ateliereva.com/)
-2. Wait for page to load
-3. A "For You" module will appear at the bottom of the page
-4. Click the toggle switch to activate
-5. Answer the 4 quiz questions:
-   - What's your vibe?
-   - What draws you in?
-   - What's most important to you?
-   - What's your aesthetic style?
-6. Watch the page transform!
-
-### Returning Experience
-
-- Your preferences are saved
-- Toggle on/off to show/hide personalization
-- The module hides when scrolling down, reappears when scrolling up
-
-## 🎨 Personalization Scenarios
-
-The extension includes 5 pre-configured personalization scenarios:
-
-### 1. The Nature-Inspired Collaborator
-**Preferences**: Collaborative + Refined + Personal Meaning + Botanical
-- Botanical-focused headlines
-- Artist recommendation: Wendy
-- Sage green color palette
-
-### 2. The Expert-Seeking Quality Enthusiast
-**Preferences**: Trust-the-expert + Bold + Quality + Traditional
-- Master craftsmen positioning
-- Artist recommendation: Eva
-- Bold black and red palette
-
-### 3. The Geometric Storyteller
-**Preferences**: Collaborative + Refined + Personal Meaning + Geometric
-- Geometric design focus
-- Artist recommendation: Mishka
-- Teal accent palette
-
-### 4. Bold Statement Maker
-**Preferences**: Spontaneous + Bold + Statement + Traditional
-- Bold, attention-grabbing copy
-- Artist recommendation: Eva
-- Traditional bold colors
-
-### 5. Planned Botanical Researcher
-**Preferences**: Planned + Refined + Quality + Botanical
-- Quality-focused botanical messaging
-- Artist recommendation: Wendy
-- Natural green palette
-
-## 🏗️ Architecture
-
-```
-for-you/
-├── manifest.json          # Extension configuration
-├── background.js          # Service worker
-├── content.js            # Main injection logic
-├── scripts/
-│   ├── quiz.js           # Quiz flow and UI
-│   ├── personalization.js # Content transformation
-│   └── storage.js        # Chrome storage wrapper
-├── styles/
-│   ├── module.css        # For You module styles
-│   ├── quiz.css          # Quiz modal styles
-│   └── animations.css    # Transition animations
-├── assets/
-│   ├── icon-16.png       # Extension icons
-│   ├── icon-48.png
-│   └── icon-128.png
-└── data/
-    └── personalization-map.json # Preference mappings
-```
-
-## 🎬 Demo Script
-
-### Setup (5 seconds)
-"Here's Atelier Eva—a beautiful Squarespace site for a luxury tattoo studio in Brooklyn."
-
-### Activation (60 seconds)
-1. Click extension icon or toggle
-2. Answer 4 questions deliberately
-3. Show done screen
-
-### Transformation (45 seconds)
-Point out changes as they happen:
-- Headline personalization
-- Recommendation card injection
-- Artist filtering and badges
-- CTA updates
-- Color palette shift
-
-### Vision (30 seconds)
-"Imagine this profile following users across every Squarespace site they visit. Answer once, get personalized everywhere."
-
-## 🐛 Debugging
-
-### Extension Not Loading
-- Check Developer mode is enabled
-- Look for errors in `chrome://extensions/`
-- Check browser console for errors
-
-### Module Not Appearing
-- Verify you're on ateliereva.com
-- Check console for initialization messages
-- Try refreshing the page
-
-### Personalization Not Working
-- Open Chrome DevTools console
-- Look for "Applying personalization" message
-- Check if personalization-map.json loaded correctly
-- Verify DOM selectors match the actual site structure
-
-### View Logs
-```javascript
-// In Chrome DevTools console:
-chrome.storage.local.get(null, console.log) // View all stored data
-```
-
-## 🔧 Customization
-
-### Adding New Personalization Scenarios
-
-1. Edit `data/personalization-map.json`
-2. Add new key with format: `preference1+preference2+preference3+preference4`
-3. Define hero content, CTAs, recommended artists, and color palette
-
-### Adjusting DOM Selectors
-
-If the target site structure changes:
-
-1. Edit `scripts/personalization.js`
-2. Update the `SELECTORS` object
-3. Use Chrome DevTools to inspect actual site structure
-
-### Modifying Quiz Questions
-
-1. Edit `scripts/quiz.js`
-2. Update the `questions` array
-3. Adjust personalization-map.json keys to match new option values
-
-## 📊 Success Metrics
-
-### Must Achieve
-- ✅ Extension installs without errors
-- ✅ Module injects on ateliereva.com
-- ✅ Quiz completes without bugs
-- ✅ 5+ visible personalization changes
-- ✅ Smooth 60fps animations
-- ✅ 2-3 minute demo flow
-
-### Bonus Points
-- ✅ Preferences persist across reloads
-- ✅ 7+ personalization changes visible
-- ⚠️ Before/after comparison (not implemented)
-- ⚠️ Mobile/tablet support (basic responsive CSS included)
-
-## 🚫 Known Limitations
-
-These are intentionally out of scope for the hackweek prototype:
-
-- No cross-site profile syncing
-- No backend infrastructure
-- Only works on one Squarespace template
-- No user accounts
-- No analytics tracking
-- No A/B testing
-- No progressive profiling
-- Minimal error handling
-- No preference editing UI
-
-## 🛠️ Development
-
-### Local Testing
-
-```bash
-# Make changes to any files
-# Reload extension in chrome://extensions/
-# Click "Reload" button on the extension card
-# Refresh ateliereva.com to see changes
-```
-
-### Quick Iteration
-
-For CSS/HTML changes:
-1. Edit the relevant style file
-2. Reload extension
-3. Hard refresh the site (Cmd+Shift+R)
-
-For JS logic changes:
-1. Edit the script file
-2. Reload extension
-3. Reload the site
-
-## 📝 Technical Notes
-
-### Performance
-- Content script loads at `document_idle` to avoid blocking page load
-- Animations use `requestAnimationFrame` for smooth 60fps
-- Scroll handler uses throttling via RAF
-- Minimal DOM queries cached where possible
-
-### Browser Compatibility
-- Built for Chrome using Manifest V3
-- Should work in Edge and other Chromium browsers
-- Not compatible with Firefox (uses different extension APIs)
-
-### Data Storage
-- Uses Chrome's `storage.local` API
-- Preferences stored as JSON object
-- No server-side storage or sync
-
-## 🎯 Next Steps for Production
-
-If this demo gets greenlit, here's what would need to be built:
-
-1. **Cross-Site Profile System**
-   - Central preference storage
-   - Profile syncing across sites
-   - Privacy controls
-
-2. **Template Compatibility**
-   - Support all Squarespace templates
-   - Dynamic selector detection
-   - Fallback handling
-
-3. **Seller Tools**
-   - Personalization dashboard
-   - Custom scenario builder
-   - A/B testing framework
-
-4. **Progressive Profiling**
-   - Multi-wave questioning
-   - Implicit preference learning
-   - Confidence scoring
-
-5. **Analytics & Optimization**
-   - Conversion tracking
-   - Scenario performance metrics
-   - Recommendation engine ML
-
-## 📄 License
-
-Internal Squarespace prototype - not for external distribution.
-
-## 👥 Credits
-
-Built for Hackweek 2024 by [Your Name]
+A Chrome extension that demonstrates how websites should welcome people. Not a personalization engine - hospitality.
 
 ---
 
-**Questions?** Check the issues in the repo or reach out on Slack.
+## The Philosophy
 
-**Ready to demo?** Practice the script 5+ times before presenting! 🚀
+The For You feature isn't technology. It's the difference between a store that knows you and one that doesn't. Three warm questions. Eight perfect experiences. Everything feels inevitable.
+
+---
+
+## Quick Start
+
+### Installation
+
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the `for-you` directory
+5. Done!
+
+### Usage
+
+1. Visit https://www.ateliereva.com/ (or any Squarespace site)
+2. Wait 1 second for the "For You" module to slide in at the bottom
+3. Click the toggle switch
+4. Answer 3 quick questions
+5. Watch the site transform
+
+---
+
+## How It Works
+
+### Three Questions
+1. **"How do you like to shop?"** - Browse vs Search
+2. **"What catches your eye?"** - Classic vs Fresh
+3. **"What matters most today?"** - Value vs Quality
+
+### Eight Personas
+2 answers × 3 questions = 8 personalized experiences
+
+### Two Brand Variables
+- Primary font (extracted from H1)
+- Accent color (extracted from buttons/links)
+
+### One Perfect Timing
+250ms for everything. Smooth, fast, human.
+
+---
+
+## What It Does
+
+**For You Module**
+- iOS 18 frosted glass aesthetic
+- Appears after 1 second
+- Hides on scroll down, returns on scroll up
+- Toggle on/off with smooth animation
+
+**Quiz Experience**
+- Minimal overlay, maximum clarity
+- Question counter (1 of 3, 2 of 3, 3 of 3)
+- Auto-advances on selection
+- Clean cards with hover states
+- Warm, conversational language
+
+**Page Transformation**
+- Hero headline adapts to persona
+- Sections reorder based on priority
+- Irrelevant sections collapse
+- CTAs update with brand color
+- Personalized indicator appears
+- Everything animates in 250ms
+
+**Smart Adaptation**
+- Detects service sites (tattoo, salon) vs commerce
+- Adapts language accordingly ("Book" vs "Shop")
+- Respects brand identity
+- Works on ANY Squarespace site
+
+---
+
+## File Structure
+
+```
+for-you/
+├── manifest.json       # Chrome extension config
+├── content.js          # Complete logic (~500 lines)
+├── style.css           # iOS aesthetic
+├── assets/
+│   └── icon-*.png      # Extension icons
+└── README.md           # This file
+```
+
+That's it. Simple.
+
+---
+
+## The Eight Personas
+
+| Persona | Hero Message | What Shows | What Hides |
+|---------|-------------|------------|------------|
+| **Browse + Classic + Value** | Timeless Finds at Great Prices | Deals, classics, popular | New arrivals, premium |
+| **Browse + Classic + Quality** | Our Finest Classic Collection | Premium, heritage | Sales, trending |
+| **Browse + Fresh + Value** | New Discoveries, Great Prices | New arrivals, trending, deals | Heritage, premium |
+| **Browse + Fresh + Quality** | Exceptional New Arrivals | New arrivals, premium, exclusive | Sales, basics |
+| **Search + Classic + Value** | Find Exactly What You Need | Search, categories, deals | Blog, about |
+| **Search + Classic + Quality** | Premium Selection, Refined Search | Categories, premium, search | Deals, blog |
+| **Search + Fresh + Value** | Latest Deals, Fast Access | Search, new arrivals, deals | About, heritage |
+| **Search + Fresh + Quality** | New Premium, Direct Access | Search, new arrivals, premium | Deals, basics |
+
+---
+
+## Demo Script (2 Minutes)
+
+**Setup**: Any Squarespace site. Extension installed.
+
+**Act 1: The Invitation** (20s)
+- Page loads → Module slides in
+- "Notice how it feels native"
+- Click toggle
+
+**Act 2: The Conversation** (30s)
+- Answer 3 questions deliberately
+- "Three questions. Eight experiences."
+
+**Act 3: The Transformation** (30s)
+- Hero changes
+- Sections visibly reorder
+- Sale sections collapse
+- CTAs update
+- Indicator appears
+
+**Act 4: The Persistence** (20s)
+- Navigate to different site
+- Module appears with toggle ON
+- Site auto-transforms
+
+**Act 5: The Pitch** (20s)
+- "8 personas from 3 questions"
+- "Respects the brand while serving the user"
+- "This is how websites should work"
+
+---
+
+## Technical Details
+
+### Brand Extraction
+```javascript
+// 1. Get font from H1
+const font = getComputedStyle(h1).fontFamily;
+
+// 2. Get color from button or link
+const accent = getComputedStyle(button).backgroundColor;
+
+// 3. Apply as CSS variables
+--site-font: [extracted font]
+--site-accent: [extracted color]
+```
+
+### Section Reordering
+```javascript
+// Flexbox ordering based on persona priorities
+container.style.display = 'flex';
+section.style.order = priorityScore;
+
+// Hide irrelevant sections
+section.style.maxHeight = '0';
+section.style.opacity = '0';
+```
+
+### Persistence
+```javascript
+// localStorage remembers:
+localStorage.getItem('for-you-persona')  // browse-classic-value
+localStorage.getItem('for-you-enabled')  // true
+```
+
+---
+
+## Why This Version Wins
+
+### Simple
+- 3 questions, not 10
+- 2 brand variables, not 20
+- 1 animation timing, not complex choreography
+- ~500 lines total, not 2000
+
+### Human
+- Questions feel like conversation
+- Module feels like iOS
+- Transformations respect the brand
+- Everything feels warm, not robotic
+
+### Smart
+- Auto-detects site type
+- Adapts language accordingly
+- Extracts brand automatically
+- Persists across sessions
+
+### The Magic Moment
+When sections reorder while maintaining brand identity - that's when people understand this is the future.
+
+---
+
+## Browser Support
+
+- Chrome (Manifest V3)
+- Edge (Chromium-based)
+- Brave (Chromium-based)
+
+Not compatible with Firefox (different extension APIs).
+
+---
+
+## License
+
+Internal prototype - not for external distribution.
+
+---
+
+## The Bottom Line
+
+This isn't a feature. It's a philosophy.
+
+**Simple enough that anyone can use it.**
+**Smart enough to transform any site.**
+**Human enough to feel like hospitality.**
+
+*"For You. Two words that change everything."*
+
+---
+
+**Questions?** Check the code - it's designed to be read.
+**Ready to demo?** Practice once, then ship it.
+**Want to iterate?** Everything is in content.js.
+
+Ship it. 🚀
