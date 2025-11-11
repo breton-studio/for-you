@@ -25,11 +25,13 @@ The For You feature isn't technology. It's the difference between a store that k
 
 ### Usage
 
-1. Visit https://www.ateliereva.com/ (or any Squarespace site)
+1. Visit **any Squarespace site** (e.g., https://www.ateliereva.com/)
 2. Wait 1 second for the "For You" module to slide in at the bottom
 3. Click the toggle switch
 4. Answer 3 quick questions
 5. Watch the site transform
+
+**Smart Detection**: The extension automatically detects Squarespace sites and only activates on them. Works on custom domains, not just *.squarespace.com!
 
 ---
 
@@ -79,7 +81,17 @@ The For You feature isn't technology. It's the difference between a store that k
 - Detects service sites (tattoo, salon) vs commerce
 - Adapts language accordingly ("Book" vs "Shop")
 - Respects brand identity
-- Works on ANY Squarespace site
+- Works on ANY Squarespace site (custom domains included)
+
+**Squarespace Detection**
+- Automatically identifies Squarespace sites via:
+  - Meta tags (generator, content)
+  - Script URLs (static1.squarespace.com)
+  - DOM attributes (data-controller, .sqs- classes)
+  - Global objects (Static.SQUARESPACE_CONTEXT)
+  - HTML content analysis
+- Only activates on confirmed Squarespace sites
+- Works on custom domains like ateliereva.com
 
 ---
 

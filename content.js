@@ -2,6 +2,63 @@
 // Simple. Warm. Perfect.
 
 // ========================================
+// SQUARESPACE DETECTION - Only activate on Squarespace sites
+// ========================================
+
+function isSquarespaceSite() {
+  // Check 1: Meta tags
+  const metaTags = Array.from(document.querySelectorAll('meta'));
+  const hasSquarespaceMeta = metaTags.some(meta =>
+    (meta.getAttribute('content') || '').toLowerCase().includes('squarespace') ||
+    (meta.getAttribute('name') || '').toLowerCase().includes('squarespace') ||
+    (meta.getAttribute('generator') || '').toLowerCase().includes('squarespace')
+  );
+
+  if (hasSquarespaceMeta) {
+    console.log('For You: Squarespace detected via meta tags');
+    return true;
+  }
+
+  // Check 2: Scripts from Squarespace CDN
+  const scripts = Array.from(document.querySelectorAll('script[src]'));
+  const hasSquarespaceScripts = scripts.some(script =>
+    script.src.includes('squarespace.com') ||
+    script.src.includes('sqsp.com')
+  );
+
+  if (hasSquarespaceScripts) {
+    console.log('For You: Squarespace detected via script URLs');
+    return true;
+  }
+
+  // Check 3: Squarespace-specific attributes
+  const hasSquarespaceAttr = document.querySelector('[data-controller*="Squarespace"]') ||
+                              document.querySelector('[class*="sqs-"]') ||
+                              document.querySelector('.squarespace-comments');
+
+  if (hasSquarespaceAttr) {
+    console.log('For You: Squarespace detected via DOM attributes');
+    return true;
+  }
+
+  // Check 4: Squarespace global object
+  if (window.Static && window.Static.SQUARESPACE_CONTEXT) {
+    console.log('For You: Squarespace detected via Static.SQUARESPACE_CONTEXT');
+    return true;
+  }
+
+  // Check 5: Look for Squarespace in HTML comments (common in Squarespace sites)
+  const htmlContent = document.documentElement.innerHTML;
+  if (htmlContent.includes('Squarespace') || htmlContent.includes('sqsp')) {
+    console.log('For You: Squarespace detected via HTML content');
+    return true;
+  }
+
+  console.log('For You: Not a Squarespace site - extension will not activate');
+  return false;
+}
+
+// ========================================
 // PERSONAS - Eight paths from three questions
 // ========================================
 
@@ -465,11 +522,15 @@ function initForYou() {
   console.log('For You: Ready', { persona: savedPersona, enabled: isEnabled });
 }
 
-// Start when page loads
+// Start when page loads - but only on Squarespace sites
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(initForYou, 1000);
+    if (isSquarespaceSite()) {
+      setTimeout(initForYou, 1000);
+    }
   });
 } else {
-  setTimeout(initForYou, 1000);
+  if (isSquarespaceSite()) {
+    setTimeout(initForYou, 1000);
+  }
 }

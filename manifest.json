@@ -1,23 +1,12 @@
 {
   "manifest_version": 3,
   "name": "For You",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Personalization that feels human",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": [
-    "*://*.squarespace.com/*",
-    "https://www.ateliereva.com/*",
-    "https://ateliereva.com/*",
-    "*://localhost/*",
-    "file:///*"
-  ],
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
   "content_scripts": [{
-    "matches": [
-      "*://*.squarespace.com/*",
-      "https://www.ateliereva.com/*",
-      "https://ateliereva.com/*",
-      "*://localhost/*"
-    ],
+    "matches": ["<all_urls>"],
     "js": ["content.js"],
     "css": ["style.css"],
     "run_at": "document_idle"
