@@ -1053,22 +1053,46 @@ const ForYouPersonalization = {
     if (children.length < 7) {
       console.log(`For You: Not enough direct children (${children.length} < 7), checking nested structure`);
 
-      // Look for container with many children (common pattern: section > container > items)
-      const containers = Array.from(section.children).filter(child => child.children.length >= 7);
+      // Look for list containers (ul, ol) - common for repeated items like team members
+      const lists = section.querySelectorAll('ul, ol');
+      console.log(`For You: Found ${lists.length} list elements in section`);
 
-      if (containers.length > 0) {
-        // Use the container with the most children
-        const largestContainer = containers.reduce((max, container) =>
-          container.children.length > max.children.length ? container : max
-        );
+      if (lists.length > 0) {
+        // Use the list with the most items
+        const largestList = Array.from(lists).reduce((max, list) =>
+          list.children.length > (max?.children.length || 0) ? list : max
+        , null);
 
-        children = Array.from(largestContainer.children).filter(child => {
-          return !child.classList.contains('for-you-intro-section') &&
-                 !child.classList.contains('for-you-final-cta') &&
-                 child.offsetHeight > 20;
-        });
+        if (largestList && largestList.children.length >= 7) {
+          children = Array.from(largestList.children).filter(child => {
+            return !child.classList.contains('for-you-intro-section') &&
+                   !child.classList.contains('for-you-final-cta') &&
+                   child.offsetHeight > 20;
+          });
 
-        console.log(`For You: Found nested container with ${children.length} children`);
+          console.log(`For You: Found list with ${children.length} items (tag: ${largestList.tagName.toLowerCase()})`);
+        }
+      }
+
+      // If no lists found, look for other containers with many children
+      if (children.length < 7) {
+        const containers = Array.from(section.children).filter(child => child.children.length >= 7);
+        console.log(`For You: Found ${containers.length} containers with 7+ children`);
+
+        if (containers.length > 0) {
+          // Use the container with the most children
+          const largestContainer = containers.reduce((max, container) =>
+            container.children.length > max.children.length ? container : max
+          );
+
+          children = Array.from(largestContainer.children).filter(child => {
+            return !child.classList.contains('for-you-intro-section') &&
+                   !child.classList.contains('for-you-final-cta') &&
+                   child.offsetHeight > 20;
+          });
+
+          console.log(`For You: Found nested container with ${children.length} children`);
+        }
       }
     }
 
