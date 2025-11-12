@@ -1573,6 +1573,20 @@ const ForYouPersonalization = {
   async animateTextChange(element, newText) {
     if (!element) return;
 
+    // PRE-EMPTIVELY disable Squarespace/site animations on element AND parent
+    // This must happen BEFORE our animation starts to prevent race conditions
+    element.style.setProperty('animation', 'none', 'important');
+    element.style.setProperty('animation-delay', '0s', 'important');
+
+    const parent = element.parentElement;
+    if (parent) {
+      parent.style.setProperty('animation', 'none', 'important');
+      parent.style.setProperty('animation-delay', '0s', 'important');
+    }
+
+    // Wait for styles to apply before starting our animation
+    await this.wait(50);
+
     // Store original opacity for error recovery
     const originalOpacity = getComputedStyle(element).opacity;
 
@@ -1609,6 +1623,13 @@ const ForYouPersonalization = {
       element.style.setProperty('animation', 'none', 'important');  // Disable CSS keyframe animations
       element.style.setProperty('animation-delay', '0s', 'important');  // Prevent delayed animations
 
+      // Also ensure parent doesn't animate (prevents container-level hiding)
+      const parentCleanup = element.parentElement;
+      if (parentCleanup) {
+        parentCleanup.style.setProperty('animation', 'none', 'important');
+        parentCleanup.style.setProperty('animation-delay', '0s', 'important');
+      }
+
     } catch (error) {
       // ERROR RECOVERY: Restore opacity if animation fails
       console.error('For You: Animation failed, restoring opacity', error);
@@ -1617,6 +1638,13 @@ const ForYouPersonalization = {
       element.style.setProperty('animation', 'none', 'important');
       element.style.setProperty('animation-delay', '0s', 'important');
       element.style.transition = '';
+
+      // Also disable parent animations in error case
+      const parentError = element.parentElement;
+      if (parentError) {
+        parentError.style.setProperty('animation', 'none', 'important');
+        parentError.style.setProperty('animation-delay', '0s', 'important');
+      }
     }
   },
 
