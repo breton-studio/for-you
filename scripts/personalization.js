@@ -2359,6 +2359,10 @@ const ForYouPersonalization = {
   async executeTransformation(preferences) {
     console.log('For You: Starting AI-powered transformation', preferences);
 
+    // CRITICAL: Disable all Squarespace animations BEFORE any modifications
+    // This prevents race conditions and animation conflicts with personalization
+    this.disableSquarespaceAnimations();
+
     try {
       // 0. Build business profile (enhanced if content inventory available)
       let businessProfile = this.buildBusinessProfile();
@@ -2839,6 +2843,9 @@ const ForYouPersonalization = {
   async removePersonalization() {
     console.log('For You: Removing all personalization');
 
+    // Re-enable Squarespace animations
+    this.enableSquarespaceAnimations();
+
     // Restore ALL modified text elements (headlines, paragraphs, CTAs, etc.)
     const modifiedElements = document.querySelectorAll('[data-for-you-modified="true"]');
     console.log(`For You: Restoring ${modifiedElements.length} modified elements`);
@@ -3262,6 +3269,68 @@ const ForYouPersonalization = {
   },
 
   // Utility: wait
+  // Disable Squarespace animations globally when For You is active
+  disableSquarespaceAnimations() {
+    // Remove existing style override if present
+    const existingStyle = document.getElementById('for-you-animation-override');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
+    // Inject CSS to disable ALL Squarespace native animations
+    const style = document.createElement('style');
+    style.id = 'for-you-animation-override';
+    style.textContent = `
+      /* Disable Squarespace animations while For You is active */
+      .sqs-slide-up,
+      .sqs-slide-down,
+      .sqs-fade-in,
+      .sqs-glide,
+      .sqs-no-animate,
+      .fluid-image-animation-wrapper,
+      [data-animation-role],
+      .sqs-block[class*="animation"],
+      .fe-block[class*="animation"] {
+        animation: none !important;
+        animation-delay: 0s !important;
+        animation-duration: 0s !important;
+        transform: none !important;
+        opacity: 1 !important;
+        transition-delay: 0s !important;
+      }
+
+      /* Target inline animation styles */
+      body.for-you-active [style*="animation"],
+      body.for-you-active [style*="Animation"] {
+        animation: none !important;
+        animation-delay: 0s !important;
+      }
+
+      /* Ensure all blocks are visible immediately */
+      body.for-you-active .sqs-block,
+      body.for-you-active .fe-block {
+        opacity: 1 !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+    document.body.classList.add('for-you-active');
+
+    console.log('For You: Disabled Squarespace animations globally');
+  },
+
+  // Re-enable Squarespace animations when For You is deactivated
+  enableSquarespaceAnimations() {
+    const style = document.getElementById('for-you-animation-override');
+    if (style) {
+      style.remove();
+    }
+
+    document.body.classList.remove('for-you-active');
+
+    console.log('For You: Re-enabled Squarespace animations');
+  },
+
   wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
