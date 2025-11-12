@@ -1331,6 +1331,11 @@ const ForYouPersonalization = {
 
   // Filter repeated content in a section (keep top 3 of 6+)
   async filterRepeatedContent(section, sectionType, preferences) {
+    // CRITICAL: Never filter content in hero section - hero elements must always remain visible
+    if (sectionType === this.SECTION_TYPES.HERO) {
+      return;
+    }
+
     // Detect repeated items using generic pattern matching
     const items = this.detectRepeatedItems(section);
 
