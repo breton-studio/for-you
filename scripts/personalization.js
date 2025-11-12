@@ -1079,6 +1079,14 @@ const ForYouPersonalization = {
 
   // Detect repeated items in a section using generic pattern matching
   detectRepeatedItems(section) {
+    // CRITICAL: Never process items if section is or contains hero element
+    // This prevents hero children from being detected as "repeated items"
+    const heroElement = this.findElement(this.SELECTORS.hero);
+    if (section === heroElement || (heroElement && section.contains(heroElement))) {
+      console.log('For You: detectRepeatedItems - section contains hero, returning empty array');
+      return [];
+    }
+
     // Get all direct children of the section
     let children = Array.from(section.children).filter(child => {
       // Filter out injected For You elements and very small elements
@@ -1291,6 +1299,16 @@ const ForYouPersonalization = {
 
   // Hide a repeated item with animation
   async hideRepeatedItem(item) {
+    // CRITICAL: Never hide if item is part of hero element
+    // Check if item IS hero, CONTAINS hero, or is INSIDE hero
+    const heroElement = this.findElement(this.SELECTORS.hero);
+    if (item === heroElement ||
+        (heroElement && item.contains(heroElement)) ||
+        (heroElement && heroElement.contains(item))) {
+      console.log('For You: Refusing to hide item - it is part of hero element');
+      return;
+    }
+
     // Store original state
     item.dataset.forYouOriginalDisplay = getComputedStyle(item).display;
     item.dataset.forYouOriginalHeight = item.offsetHeight + 'px';
