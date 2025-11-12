@@ -724,8 +724,10 @@ const ForYouPersonalization = {
     const images = section.querySelectorAll('img').length;
     const hasGallery = section.querySelector('.gallery, .portfolio, .sqs-gallery') !== null;
 
-    // Hero detection
-    if (section === this.findElement(this.SELECTORS.hero)) {
+    // Hero detection - check both exact match AND if section contains hero
+    // This handles cases where parent containers are being checked
+    const heroElement = this.findElement(this.SELECTORS.hero);
+    if (section === heroElement || (heroElement && section.contains(heroElement))) {
       return this.SECTION_TYPES.HERO;
     }
 
@@ -1332,6 +1334,13 @@ const ForYouPersonalization = {
   // Filter repeated content in a section (keep top 3 of 6+)
   async filterRepeatedContent(section, sectionType, preferences) {
     // CRITICAL: Never filter content in hero section - hero elements must always remain visible
+    // Double-check: also verify section doesn't contain hero element (defensive against detection failures)
+    const heroElement = this.findElement(this.SELECTORS.hero);
+    if (section === heroElement || (heroElement && section.contains(heroElement))) {
+      console.log('For You: Skipping filterRepeatedContent - section contains hero element');
+      return;
+    }
+
     if (sectionType === this.SECTION_TYPES.HERO) {
       return;
     }
