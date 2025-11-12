@@ -187,11 +187,15 @@ const ForYouStorage = {
         if (key.startsWith('forYouInventory_') && value.expiresAt && now > value.expiresAt) {
           keysToRemove.push(key);
         }
+        // Also clear expired modifications
+        if (key.startsWith('forYouMods_') && value.expiresAt && now > value.expiresAt) {
+          keysToRemove.push(key);
+        }
       }
 
       if (keysToRemove.length > 0) {
         await chrome.storage.local.remove(keysToRemove);
-        console.log(`For You: Cleared ${keysToRemove.length} expired inventories`);
+        console.log(`For You: Cleared ${keysToRemove.length} expired inventories/modifications`);
       }
 
       return keysToRemove.length;
@@ -199,6 +203,85 @@ const ForYouStorage = {
       console.error('For You: Error clearing expired inventories', error);
       return 0;
     }
+  },
+
+  // Save personalized modifications for a site + preferences combination
+  async saveModifications(siteKey, preferences, modifications) {
+    try {
+      // Create a hash of the preferences to use as part of the cache key
+      const prefsHash = this.hashPreferences(preferences);
+      const key = `forYouMods_${siteKey}_${prefsHash}`;
+
+      const data = {
+        modifications: modifications,
+        preferences: preferences,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
+      };
+
+      await chrome.storage.local.set({ [key]: data });
+      console.log(`For You: Modifications cached for ${siteKey} (${modifications.length} items)`);
+      return true;
+    } catch (error) {
+      console.error('For You: Error saving modifications', error);
+      return false;
+    }
+  },
+
+  // Get cached modifications for a site + preferences combination
+  async getModifications(siteKey, preferences) {
+    try {
+      const prefsHash = this.hashPreferences(preferences);
+      const key = `forYouMods_${siteKey}_${prefsHash}`;
+      const result = await chrome.storage.local.get([key]);
+      const data = result[key];
+
+      if (!data) {
+        console.log(`For You: No cached modifications for ${siteKey} with these preferences`);
+        return null;
+      }
+
+      // Check if cache has expired
+      if (Date.now() > data.expiresAt) {
+        console.log(`For You: Cached modifications expired for ${siteKey}`);
+        await chrome.storage.local.remove([key]);
+        return null;
+      }
+
+      // Verify preferences match exactly (in case of hash collision)
+      if (!this.preferencesMatch(data.preferences, preferences)) {
+        console.log(`For You: Cached preferences don't match for ${siteKey}`);
+        return null;
+      }
+
+      console.log(`For You: Using cached modifications for ${siteKey} (${data.modifications.length} items)`);
+      return data.modifications;
+
+    } catch (error) {
+      console.error('For You: Error getting cached modifications', error);
+      return null;
+    }
+  },
+
+  // Hash preferences to create a unique key
+  hashPreferences(preferences) {
+    // Create a simple hash from the preferences object
+    const str = JSON.stringify(preferences);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  },
+
+  // Check if two preferences objects match
+  preferencesMatch(prefs1, prefs2) {
+    if (!prefs1 || !prefs2) return false;
+    return prefs1.decisionStyle === prefs2.decisionStyle &&
+           prefs1.visualStyle === prefs2.visualStyle &&
+           prefs1.priority === prefs2.priority;
   },
 
   // Generate site key from URL

@@ -538,13 +538,24 @@
         const hasPreferences = await ForYouStorage.hasPreferences();
 
         if (hasPreferences) {
-          // User has preferences - apply them
+          // User has preferences - check for cached modifications first
           toggle.classList.add('loading');
           toggle.setAttribute('aria-checked', 'true');
           await ForYouStorage.saveToggleState(true);
 
           const preferences = await ForYouStorage.getPreferences();
-          await ForYouPersonalization.executeTransformation(preferences);
+          const siteKey = ForYouStorage.getSiteKey();
+          const cachedMods = await ForYouStorage.getModifications(siteKey, preferences);
+
+          if (cachedMods && cachedMods.length > 0) {
+            // CACHE HIT - instant restore!
+            console.log('For You: Cache hit - restoring instantly');
+            await ForYouPersonalization.executeTransformationFromCache(preferences, cachedMods);
+          } else {
+            // CACHE MISS - call API
+            console.log('For You: No cache - calling API');
+            await ForYouPersonalization.executeTransformation(preferences);
+          }
 
           // Complete the animation
           toggle.classList.remove('loading');

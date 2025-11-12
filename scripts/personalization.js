@@ -2274,6 +2274,40 @@ const ForYouPersonalization = {
   },
 
   // Apply API modifications with validation
+  // Apply cached modifications instantly (no API call needed)
+  async applyCachedModifications(cachedMods) {
+    console.log(`For You: Applying ${cachedMods.length} cached modifications`);
+
+    for (const mod of cachedMods) {
+      // Find element by ID
+      const element = document.querySelector(`[data-for-you-id="${mod.id}"]`);
+      if (!element) {
+        console.warn(`For You: Cached element not found: ${mod.id}`);
+        continue;
+      }
+
+      // Skip low-confidence modifications
+      if (mod.confidence < 0.7) {
+        continue;
+      }
+
+      const modifiedText = mod.modified.trim();
+
+      // Store original text if not already stored (first time applying)
+      if (!element.dataset.forYouOriginalText) {
+        element.dataset.forYouOriginalText = element.textContent.trim();
+      }
+
+      // Mark as modified
+      element.dataset.forYouModified = 'true';
+
+      // Apply with animation
+      await this.animateTextChange(element, modifiedText);
+    }
+
+    console.log('For You: Cached modifications applied');
+  },
+
   async applyAPIModifications(modifications) {
     for (const mod of modifications) {
       // Find element by ID
@@ -2382,6 +2416,64 @@ const ForYouPersonalization = {
     }
   },
 
+  // Execute transformation from cache (instant, no API call)
+  async executeTransformationFromCache(preferences, cachedModifications) {
+    console.log('For You: Restoring from cache - instant transformation!', preferences);
+
+    // CRITICAL: Disable all Squarespace animations BEFORE any modifications
+    this.disableSquarespaceAnimations();
+
+    try {
+      // Apply cached modifications instantly
+      await this.applyCachedModifications(cachedModifications);
+
+      // Still need to do section reordering and footer replacement
+      // But we skip the expensive API call!
+
+      // Build business profile for footer (quick operation)
+      let businessProfile = this.buildBusinessProfile();
+      const siteKey = ForYouStorage.getSiteKey();
+      const contentInventory = await ForYouStorage.getContentInventory(siteKey);
+
+      if (contentInventory) {
+        businessProfile = await this.buildEnhancedBusinessProfile(contentInventory);
+      }
+
+      // Reorder and collapse sections (starts at 700ms)
+      setTimeout(async () => {
+        await this.reorderPageSections(preferences);
+
+        // Filter repeated content within sections
+        await this.wait(500);
+
+        const sections = this.findAllElements(this.SELECTORS.sections);
+        console.log(`For You: Checking ${sections.length} sections for repeated content`);
+
+        for (const section of sections) {
+          if (section.classList.contains('for-you-hidden')) {
+            continue;
+          }
+
+          const sectionType = this.detectSectionType(section);
+          await this.filterRepeatedContent(section, sectionType, preferences);
+        }
+
+        console.log('For You: Content filtering complete');
+
+        // Replace default footer with custom branded footer
+        await this.replaceFooterWithCustom(businessProfile, preferences);
+      }, 700);
+
+      console.log('For You: Cache restoration complete');
+
+    } catch (error) {
+      console.error('For You: Cache restoration failed', error);
+      // If cache fails, fall back to full transformation
+      console.log('For You: Falling back to full transformation');
+      await this.executeTransformation(preferences);
+    }
+  },
+
   // Execute full transformation (AI-powered)
   async executeTransformation(preferences) {
     console.log('For You: Starting AI-powered transformation', preferences);
@@ -2426,6 +2518,10 @@ const ForYouPersonalization = {
 
       // 4. Apply modifications with animation and validation
       await this.applyAPIModifications(modifications);
+
+      // 4.5. Cache the modifications for quick restore on next toggle
+      await ForYouStorage.saveModifications(siteKey, preferences, modifications);
+      console.log('For You: Modifications cached for instant restore');
 
       // 5. Reorder and collapse sections (starts at 700ms)
       setTimeout(async () => {
@@ -2893,9 +2989,11 @@ const ForYouPersonalization = {
             element.style.setProperty('animation', 'none', 'important');
             element.style.setProperty('animation-delay', '0s', 'important');
             element.style.transition = '';
-            delete element.dataset.forYouOriginalText;
-            delete element.dataset.forYouModified;
-            delete element.dataset.forYouId;
+
+            // KEEP data attributes for quick restore! Don't delete them.
+            // Change forYouModified to "false" to indicate it's in original state
+            element.dataset.forYouModified = 'false';
+            // Keep forYouOriginalText and forYouId for cache restoration
           }, 200);
         }, index * 30); // Stagger by 30ms
       }
