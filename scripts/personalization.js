@@ -1601,11 +1601,16 @@ const ForYouPersonalization = {
       element.style.transition = '';
       element.style.setProperty('opacity', '1', 'important');  // Force visibility
       element.style.setProperty('visibility', 'visible', 'important');  // Extra safety
+      element.style.setProperty('animation', 'none', 'important');  // Disable CSS keyframe animations
+      element.style.setProperty('animation-delay', '0s', 'important');  // Prevent delayed animations
 
     } catch (error) {
       // ERROR RECOVERY: Restore opacity if animation fails
       console.error('For You: Animation failed, restoring opacity', error);
-      element.style.opacity = originalOpacity || '1';
+      element.style.setProperty('opacity', originalOpacity || '1', 'important');
+      element.style.setProperty('visibility', 'visible', 'important');
+      element.style.setProperty('animation', 'none', 'important');
+      element.style.setProperty('animation-delay', '0s', 'important');
       element.style.transition = '';
     }
   },
@@ -2305,6 +2310,8 @@ const ForYouPersonalization = {
         // Force visibility with !important to prevent site animations from hiding elements
         element.style.setProperty('opacity', '1', 'important');
         element.style.setProperty('visibility', 'visible', 'important');
+        element.style.setProperty('animation', 'none', 'important');
+        element.style.setProperty('animation-delay', '0s', 'important');
         element.style.transition = '';
 
         delete element.dataset.forYouModified;
@@ -2816,6 +2823,8 @@ const ForYouPersonalization = {
             element.textContent = originalText;
             element.style.setProperty('opacity', '1', 'important');
             element.style.setProperty('visibility', 'visible', 'important');
+            element.style.setProperty('animation', 'none', 'important');
+            element.style.setProperty('animation-delay', '0s', 'important');
             element.style.transition = '';
             delete element.dataset.forYouOriginalText;
             delete element.dataset.forYouModified;
