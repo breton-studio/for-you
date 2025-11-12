@@ -899,15 +899,25 @@ const ForYouPersonalization = {
       if (sectionType === this.SECTION_TYPES.SOCIAL_PROOF) score -= 5;
     }
 
+    // CRITICAL: Hero must NEVER fall below visibility threshold (40)
+    // Ensure hero always stays visible regardless of preference combinations
+    if (sectionType === this.SECTION_TYPES.HERO) {
+      score = Math.max(score, 100);  // Force hero to always have max relevance
+    }
+
     // Ensure score stays in reasonable range (0-120)
     return Math.max(0, Math.min(120, score));
   },
 
   // Reorder page sections
   async reorderPageSections(preferences) {
+    // CRITICAL: Exclude hero section from filtering - it must always remain visible
+    const heroSection = this.findElement(this.SELECTORS.hero);
+
     const sections = Array.from(this.findAllElements(this.SELECTORS.sections))
       .filter(s => !s.classList.contains('for-you-intro-section') &&
                    !s.classList.contains('for-you-final-cta') &&
+                   s !== heroSection &&  // Never hide hero section
                    s.offsetHeight > 50); // Skip tiny sections
 
     if (sections.length < 2) {
@@ -919,6 +929,9 @@ const ForYouPersonalization = {
     const scoredSections = sections.map((section, originalIndex) => {
       const type = this.detectSectionType(section);
       const relevance = this.calculateSectionRelevance(type, preferences);
+
+      // DEBUG: Log section scoring
+      console.log(`For You: Section scored - Type: ${type}, Relevance: ${relevance}, Will hide: ${relevance < 40}`);
 
       return {
         element: section,
@@ -1462,13 +1475,19 @@ const ForYouPersonalization = {
   hasLayoutIssue(element) {
     const computed = getComputedStyle(element);
 
+    // SPECIAL CASE: Hero elements should be more lenient
+    // Hero sections often have overflow:hidden intentionally for design purposes
+    const heroSection = this.findElement(this.SELECTORS.hero);
+    const isHeroElement = heroSection && element.closest('section') === heroSection;
+    const tolerance = isHeroElement ? 20 : 5;  // More tolerance for hero elements
+
     // Check for horizontal overflow
-    if (element.scrollWidth > element.clientWidth + 5) {
+    if (element.scrollWidth > element.clientWidth + tolerance) {
       return true; // Text is overflowing horizontally
     }
 
     // Check for vertical overflow
-    if (element.scrollHeight > element.clientHeight + 5) {
+    if (element.scrollHeight > element.clientHeight + tolerance) {
       return true; // Text is overflowing vertically
     }
 
@@ -1478,12 +1497,17 @@ const ForYouPersonalization = {
     const textWidth = range.getBoundingClientRect().width;
     const containerWidth = element.getBoundingClientRect().width;
 
-    if (textWidth > containerWidth + 5) {
+    if (textWidth > containerWidth + tolerance) {
       return true; // Text doesn't fit
     }
 
     // CRITICAL: Check for text-overflow: ellipsis or hidden overflow
     if (computed.textOverflow === 'ellipsis' || computed.overflow === 'hidden') {
+      // Skip this check for hero elements - they often have overflow:hidden intentionally
+      if (isHeroElement) {
+        return false;
+      }
+
       // If overflow is hidden, check if text is actually being clipped
       const padding = parseFloat(computed.paddingLeft || 0) + parseFloat(computed.paddingRight || 0);
       const availableWidth = containerWidth - padding;
@@ -1543,33 +1567,44 @@ const ForYouPersonalization = {
   async animateTextChange(element, newText) {
     if (!element) return;
 
-    // Fade out
-    element.style.transition = 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)';
-    element.style.opacity = '0';
+    // Store original opacity for error recovery
+    const originalOpacity = getComputedStyle(element).opacity;
 
-    await this.wait(150);
+    try {
+      // Fade out
+      element.style.transition = 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)';
+      element.style.opacity = '0';
 
-    // Change text - preserve inner HTML structure if it exists
-    // Check if element has only text nodes or simple structure
-    const hasComplexStructure = element.children.length > 0 ||
-                                  element.innerHTML.includes('<br>') ||
-                                  element.innerHTML.includes('<span>');
+      await this.wait(150);
 
-    if (hasComplexStructure) {
-      // Preserve structure by finding and replacing text nodes only
-      this.replaceTextPreservingStructure(element, newText);
-    } else {
-      // Simple case: just replace textContent
-      element.textContent = newText;
+      // Change text - preserve inner HTML structure if it exists
+      // Check if element has only text nodes or simple structure
+      const hasComplexStructure = element.children.length > 0 ||
+                                    element.innerHTML.includes('<br>') ||
+                                    element.innerHTML.includes('<span>');
+
+      if (hasComplexStructure) {
+        // Preserve structure by finding and replacing text nodes only
+        this.replaceTextPreservingStructure(element, newText);
+      } else {
+        // Simple case: just replace textContent
+        element.textContent = newText;
+      }
+
+      // Fade in
+      element.style.opacity = '1';
+
+      await this.wait(150);
+
+      // Clean up
+      element.style.transition = '';
+
+    } catch (error) {
+      // ERROR RECOVERY: Restore opacity if animation fails
+      console.error('For You: Animation failed, restoring opacity', error);
+      element.style.opacity = originalOpacity || '1';
+      element.style.transition = '';
     }
-
-    // Fade in
-    element.style.opacity = '1';
-
-    await this.wait(150);
-
-    // Clean up
-    element.style.transition = '';
   },
 
   // Replace text while preserving HTML structure (br tags, spans, etc)
