@@ -14,15 +14,18 @@ const ForYouDebugOverlay = {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: #00ff00;
       font-family: 'Courier New', monospace;
       font-size: 11px;
       padding: 10px 12px;
-      border-radius: 4px;
+      border-radius: 8px;
       z-index: 999999;
       min-width: 250px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       line-height: 1.4;
     `;
 

@@ -98,10 +98,21 @@ const ForYouPersonalization = {
   // Detect site type based on content
   detectSiteType() {
     const indicators = {
+      // Sports, training, athletic programs (CHECK FIRST - most specific)
+      sports: ['training', 'camps', 'clinics', 'league', 'tournament', 'athletic', 'coach', 'soccer', 'basketball', 'baseball', 'fitness', 'gym'],
+      // Education, learning, courses
+      education: ['course', 'class', 'lesson', 'curriculum', 'tutor', 'learn', 'student', 'school', 'academy', 'workshop'],
+      // Events, conferences, gatherings
+      events: ['event', 'conference', 'seminar', 'festival', 'gathering', 'summit'],
+      // Restaurants (more specific keywords to avoid false positives)
+      restaurant: ['reservation', 'dine', 'cuisine', 'chef', 'dishes', 'culinary', 'restaurant', 'dining'],
+      // E-commerce, retail
+      ecommerce: ['shop', 'cart', 'product', 'buy', 'add to cart', 'store', 'purchase'],
+      // Services, appointments
       service: ['book', 'appointment', 'consultation', 'schedule'],
-      ecommerce: ['shop', 'cart', 'product', 'buy', 'add to cart'],
+      // Portfolio, creative work
       portfolio: ['portfolio', 'work', 'projects', 'case studies'],
-      restaurant: ['menu', 'reservation', 'order', 'dine'],
+      // Professional services
       professional: ['services', 'expertise', 'team', 'about us']
     };
 
@@ -117,6 +128,8 @@ const ForYouPersonalization = {
     }
 
     this.siteType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+    console.log('For You: Site type detection scores:', scores);
+    console.log('For You: Detected site type:', this.siteType);
     return this.siteType;
   },
 
@@ -1361,9 +1374,10 @@ const ForYouPersonalization = {
         break;
 
       case 'cta':
-        // CTAs: accept shorter (40% min), very strict on max (+15%)
+        // CTAs: accept shorter (40% min), very strict on max (+10%)
+        // Reduced from 15% to account for button padding
         constraints.minTolerance = 0.40;
-        constraints.maxTolerance = 0.15;
+        constraints.maxTolerance = 0.10;
         break;
 
       case 'subheading':
@@ -1390,6 +1404,20 @@ const ForYouPersonalization = {
     constraints.maxLength = Math.ceil(
       originalText.length * (1 + constraints.maxTolerance)
     );
+
+    // CRITICAL: Account for padding in buttons/CTAs
+    if (elementType === 'cta') {
+      const computed = getComputedStyle(element);
+      const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+      const paddingRight = parseFloat(computed.paddingRight) || 0;
+      const totalPadding = paddingLeft + paddingRight;
+
+      // If button has significant padding (> 20px total), reduce max length further
+      if (totalPadding > 20) {
+        // Reduce tolerance by 5% to be extra safe with padded buttons
+        constraints.maxLength = Math.floor(originalText.length * 1.05);
+      }
+    }
 
     // Visual container check - make max even stricter
     const visualConstraints = this.checkVisualConstraints(element);
@@ -1454,6 +1482,17 @@ const ForYouPersonalization = {
       return true; // Text doesn't fit
     }
 
+    // CRITICAL: Check for text-overflow: ellipsis or hidden overflow
+    if (computed.textOverflow === 'ellipsis' || computed.overflow === 'hidden') {
+      // If overflow is hidden, check if text is actually being clipped
+      const padding = parseFloat(computed.paddingLeft || 0) + parseFloat(computed.paddingRight || 0);
+      const availableWidth = containerWidth - padding;
+
+      if (textWidth > availableWidth + 2) {
+        return true; // Text is being clipped
+      }
+    }
+
     return false;
   },
 
@@ -1510,8 +1549,19 @@ const ForYouPersonalization = {
 
     await this.wait(150);
 
-    // Change text
-    element.textContent = newText;
+    // Change text - preserve inner HTML structure if it exists
+    // Check if element has only text nodes or simple structure
+    const hasComplexStructure = element.children.length > 0 ||
+                                  element.innerHTML.includes('<br>') ||
+                                  element.innerHTML.includes('<span>');
+
+    if (hasComplexStructure) {
+      // Preserve structure by finding and replacing text nodes only
+      this.replaceTextPreservingStructure(element, newText);
+    } else {
+      // Simple case: just replace textContent
+      element.textContent = newText;
+    }
 
     // Fade in
     element.style.opacity = '1';
@@ -1520,6 +1570,38 @@ const ForYouPersonalization = {
 
     // Clean up
     element.style.transition = '';
+  },
+
+  // Replace text while preserving HTML structure (br tags, spans, etc)
+  replaceTextPreservingStructure(element, newText) {
+    // Find all text nodes
+    const textNodes = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+
+    let node;
+    while (node = walker.nextNode()) {
+      // Skip empty or whitespace-only nodes
+      if (node.textContent.trim().length > 0) {
+        textNodes.push(node);
+      }
+    }
+
+    if (textNodes.length === 0) {
+      // No text nodes found, fallback to textContent
+      element.textContent = newText;
+      return;
+    }
+
+    // Replace first significant text node with new text, clear others
+    textNodes[0].textContent = newText;
+    for (let i = 1; i < textNodes.length; i++) {
+      textNodes[i].textContent = '';
+    }
   },
 
   // Personalize hero section
@@ -1608,11 +1690,12 @@ const ForYouPersonalization = {
     // Primary CTA indicators
     const primaryIndicators = [
       'book', 'contact', 'get started', 'learn more',
-      'shop', 'buy', 'schedule', 'reserve', 'inquire'
+      'shop', 'buy', 'schedule', 'reserve', 'inquire',
+      'register', 'enroll', 'sign up', 'join'
     ];
 
-    // Exclude footer/nav buttons
-    const excludeIndicators = ['instagram', 'facebook', 'twitter', 'linkedin', 'menu'];
+    // Exclude social media and navigation links (but NOT action buttons in nav)
+    const excludeIndicators = ['instagram', 'facebook', 'twitter', 'linkedin', 'youtube', 'social'];
 
     const isPrimary = primaryIndicators.some(indicator =>
       text.includes(indicator) || href.includes(indicator)
@@ -1622,10 +1705,11 @@ const ForYouPersonalization = {
       text.includes(indicator) || href.includes(indicator)
     );
 
-    // Also check if button is in header or footer (exclude those)
-    const inHeaderOrFooter = button.closest('header, footer, nav') !== null;
+    // CHANGED: Now INCLUDE CTAs in header/nav, only exclude footer
+    // This allows nav CTAs like "Book Now" to be personalized
+    const inFooter = button.closest('footer') !== null;
 
-    return isPrimary && !isExcluded && !inHeaderOrFooter;
+    return isPrimary && !isExcluded && !inFooter;
   },
 
   // Update CTA buttons throughout page
@@ -1757,8 +1841,32 @@ const ForYouPersonalization = {
       headings: [],
       paragraphs: [],
       lists: [],
-      buttons: []
+      buttons: [],
+      navigation: []  // Add navigation items
     };
+
+    // Collect navigation items first (outside of sections)
+    const navSelectors = 'nav a, header a, .header a, .navigation a, .nav a, [role="navigation"] a, .menu a';
+    document.querySelectorAll(navSelectors).forEach(el => {
+      const text = el.textContent.trim();
+
+      // Skip empty, icons-only, or very long nav items
+      if (text.length < 2 || text.length > 30) return;
+
+      // Skip if it's just an icon or SVG
+      if (el.querySelector('svg') && text.length < 3) return;
+
+      inventory.navigation.push({
+        element: el,
+        originalText: text,
+        classification: {
+          type: 'navigation',
+          level: 'primary',
+          context: 'nav-menu',
+          modifiabilityScore: this.calculateModifiabilityScore(el)
+        }
+      });
+    });
 
     // Scan all sections
     const sections = this.findAllElements(this.SELECTORS.sections);
@@ -1840,7 +1948,8 @@ const ForYouPersonalization = {
     console.log('For You: Page audit complete', {
       headings: inventory.headings.length,
       paragraphs: inventory.paragraphs.length,
-      buttons: inventory.buttons.length
+      buttons: inventory.buttons.length,
+      navigation: inventory.navigation.length
     });
 
     return inventory;
@@ -1871,6 +1980,24 @@ const ForYouPersonalization = {
   // Prepare elements for API with length constraints
   prepareElementsForAPI(inventory) {
     const elements = [];
+
+    // Navigation items (high priority for personalization)
+    if (inventory.navigation) {
+      inventory.navigation.forEach(nav => {
+        const constraints = this.calculateLengthConstraints(nav.element, nav.originalText);
+        const visualConstraints = this.checkVisualConstraints(nav.element);
+
+        elements.push({
+          id: this.generateElementId(nav.element),
+          type: 'navigation',
+          context: 'nav-menu',
+          original: nav.originalText,
+          modifiability: nav.classification.modifiabilityScore,
+          constraints: constraints,
+          visualConstraints: visualConstraints
+        });
+      });
+    }
 
     // Primary headings
     inventory.headings
@@ -1967,8 +2094,8 @@ const ForYouPersonalization = {
           preferences,
           elements
         }),
-        // 30 second timeout (AI processing can take time)
-        signal: AbortSignal.timeout(30000)
+        // 60 second timeout (AI processing can take time, especially for many elements)
+        signal: AbortSignal.timeout(60000)
       });
 
       if (!response.ok) {
@@ -2062,10 +2189,11 @@ const ForYouPersonalization = {
       // Get original constraints
       const originalText = element.textContent;
       const constraints = this.calculateLengthConstraints(element, originalText);
+      const elementType = this.getElementType(element);
 
       // Verify modification fits
       if (mod.modified.length > constraints.maxLength) {
-        console.warn(`For You: Modification too long (${mod.modified.length} > ${constraints.maxLength}), skipping`);
+        console.warn(`For You: Modification too long (${mod.modified.length} > ${constraints.maxLength}) for ${elementType}, skipping "${mod.modified}"`);
         continue;
       }
 
@@ -2077,6 +2205,11 @@ const ForYouPersonalization = {
           console.warn(`For You: Modification too short (${mod.modified.length} < 5 chars), skipping`);
           continue;
         }
+      }
+
+      // Log constraint details for CTAs (buttons) to help debug clipping
+      if (elementType === 'cta') {
+        console.log(`For You: CTA constraint check - Original: "${originalText}" (${originalText.length} chars), Modified: "${mod.modified}" (${mod.modified.length} chars), Max: ${constraints.maxLength}`);
       }
 
       // Store original
@@ -2091,8 +2224,17 @@ const ForYouPersonalization = {
 
       if (this.hasLayoutIssue(element)) {
         console.warn('For You: Layout issue detected, reverting...');
-        // Revert if layout breaks
-        element.textContent = originalText;
+        // Revert if layout breaks - preserve structure
+        const hasComplexStructure = element.children.length > 0 ||
+                                      element.innerHTML.includes('<br>') ||
+                                      element.innerHTML.includes('<span>');
+
+        if (hasComplexStructure) {
+          this.replaceTextPreservingStructure(element, originalText);
+        } else {
+          element.textContent = originalText;
+        }
+
         delete element.dataset.forYouModified;
         delete element.dataset.forYouOriginalText;
       } else {
@@ -2163,6 +2305,9 @@ const ForYouPersonalization = {
         }
 
         console.log('For You: Content filtering complete');
+
+        // 7. Replace default footer with custom branded footer
+        await this.replaceFooterWithCustom(businessProfile, preferences);
       }, 700);
 
       console.log('For You: AI transformation complete');
@@ -2607,9 +2752,16 @@ const ForYouPersonalization = {
       }
     });
 
-    // Remove all injected elements
+    // Remove all injected elements (including custom footer)
     const injectedElements = document.querySelectorAll('[data-for-you-element="true"]');
     injectedElements.forEach(element => element.remove());
+
+    // Restore original footer
+    const hiddenFooters = document.querySelectorAll('footer.for-you-hidden, .footer.for-you-hidden, #footer.for-you-hidden, [role="contentinfo"].for-you-hidden, .site-footer.for-you-hidden');
+    hiddenFooters.forEach(footer => {
+      footer.classList.remove('for-you-hidden');
+      footer.style.display = '';
+    });
 
     // Restore filtered/hidden items
     const hiddenItems = document.querySelectorAll('[data-for-you-hidden-item="true"]');
@@ -2652,6 +2804,346 @@ const ForYouPersonalization = {
     this.restoreAllSections();
 
     console.log('For You: Personalization removed');
+  },
+
+  // Replace default footer with custom branded footer
+  async replaceFooterWithCustom(businessProfile, preferences) {
+    console.log('For You: Creating custom branded footer');
+
+    // Hide existing footer
+    const footerSelectors = ['footer', '.footer', '#footer', '[role="contentinfo"]', '.site-footer'];
+    for (const selector of footerSelectors) {
+      const footer = document.querySelector(selector);
+      if (footer) {
+        footer.classList.add('for-you-hidden');
+        footer.style.display = 'none';
+        console.log('For You: Hid default footer');
+        break;
+      }
+    }
+
+    // Get brand styles
+    const brandStyles = this.brandStyles || this.extractBrandStyles();
+
+    // Determine business main goal from profile
+    const businessGoal = this.determineBusinessGoal(businessProfile);
+
+    // Generate personalized content
+    const footerContent = this.generateFooterContent(businessProfile, preferences, businessGoal);
+
+    // Create custom footer section with generous whitespace
+    const customFooter = document.createElement('section');
+    customFooter.className = 'for-you-custom-footer';
+    customFooter.dataset.forYouElement = 'true';
+    customFooter.style.cssText = `
+      padding: 120px 20px 140px 20px;
+      text-align: center;
+      background: ${brandStyles.colors.background || '#f8f8f8'};
+      border-top: 1px solid ${brandStyles.colors.border || '#e0e0e0'};
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    // Create headline with more breathing room
+    const headline = document.createElement('h2');
+    headline.textContent = footerContent.headline;
+    headline.style.cssText = `
+      font-family: ${brandStyles.typography.h1?.fontFamily || 'inherit'};
+      font-size: ${brandStyles.typography.h2?.fontSize || '2.5rem'};
+      font-weight: ${brandStyles.typography.h2?.fontWeight || '600'};
+      color: ${brandStyles.colors.text || '#000'};
+      margin: 0 0 40px 0;
+      line-height: 1.3;
+      max-width: 700px;
+    `;
+
+    // Create CTA button
+    const ctaButton = document.createElement('a');
+    ctaButton.textContent = footerContent.cta;
+    ctaButton.href = footerContent.ctaUrl;
+    ctaButton.style.cssText = `
+      display: inline-block;
+      padding: ${brandStyles.spacing?.buttonPadding || '16px 32px'};
+      background: ${brandStyles.colors.button || '#000'};
+      color: ${brandStyles.colors.buttonText || '#fff'};
+      font-family: ${brandStyles.typography.button?.fontFamily || 'inherit'};
+      font-size: ${brandStyles.typography.button?.fontSize || '1rem'};
+      font-weight: ${brandStyles.typography.button?.fontWeight || '500'};
+      text-decoration: none;
+      border-radius: ${brandStyles.borderRadius?.button || '4px'};
+      transition: transform 0.2s, opacity 0.2s;
+      cursor: pointer;
+    `;
+
+    // Add hover effect
+    ctaButton.addEventListener('mouseenter', () => {
+      ctaButton.style.transform = 'translateY(-2px)';
+      ctaButton.style.opacity = '0.9';
+    });
+    ctaButton.addEventListener('mouseleave', () => {
+      ctaButton.style.transform = 'translateY(0)';
+      ctaButton.style.opacity = '1';
+    });
+
+    // Assemble footer
+    customFooter.appendChild(headline);
+    customFooter.appendChild(ctaButton);
+
+    // Insert at end of body
+    document.body.appendChild(customFooter);
+
+    console.log('For You: Custom footer created', footerContent);
+  },
+
+  // Determine business's main goal and find actual destination URL
+  determineBusinessGoal(businessProfile) {
+    const vertical = businessProfile.vertical.toLowerCase();
+    const hasTeam = businessProfile.teamInfo?.hasTeamPage;
+    const hasCatalog = businessProfile.catalog?.items.length > 0;
+
+    // Find relevant URLs from navigation or buttons
+    const navLinks = Array.from(document.querySelectorAll('nav a, header a, .header a'));
+    const allLinks = Array.from(document.querySelectorAll('a'));
+
+    // Sports/Training sites want program registrations (CHECK FIRST - most specific)
+    if (vertical.includes('sports') || vertical.includes('training') || vertical.includes('athletic') || vertical.includes('fitness')) {
+      const programUrl = this.findBestUrl(allLinks, ['camps', 'clinics', 'training', 'programs', 'schedule', 'register', 'enroll', 'sign-up', 'classes']);
+      return { type: 'sports_registration', url: programUrl };
+    }
+
+    // Education sites want course/class enrollments
+    if (vertical.includes('education') || vertical.includes('learning') || vertical.includes('school')) {
+      const courseUrl = this.findBestUrl(allLinks, ['courses', 'classes', 'lessons', 'enroll', 'register', 'programs', 'curriculum']);
+      return { type: 'education_enrollment', url: courseUrl };
+    }
+
+    // Events sites want registrations/tickets
+    if (vertical.includes('events') || vertical.includes('conference') || vertical.includes('festival')) {
+      const eventUrl = this.findBestUrl(allLinks, ['events', 'schedule', 'register', 'tickets', 'attend', 'join']);
+      return { type: 'event_registration', url: eventUrl };
+    }
+
+    // Service businesses typically want consultations/bookings
+    if (vertical.includes('service') || vertical.includes('professional') || hasTeam) {
+      const bookingUrl = this.findBestUrl(allLinks, ['book', 'appointment', 'schedule', 'consult', 'contact']);
+      return { type: 'booking', url: bookingUrl };
+    }
+
+    // E-commerce wants purchases
+    if (vertical.includes('ecommerce') || vertical.includes('shop') || businessProfile.catalog?.type === 'products') {
+      const shopUrl = this.findBestUrl(navLinks, ['shop', 'store', 'products', 'browse', 'collection']);
+      return { type: 'purchase', url: shopUrl };
+    }
+
+    // Portfolios/agencies want project inquiries
+    if (vertical.includes('portfolio') || vertical.includes('agency') || vertical.includes('creative')) {
+      const inquiryUrl = this.findBestUrl(allLinks, ['contact', 'quote', 'inquiry', 'project', 'start']);
+      return { type: 'inquiry', url: inquiryUrl };
+    }
+
+    // Restaurants want reservations
+    if (vertical.includes('restaurant') || vertical.includes('food')) {
+      const reservationUrl = this.findBestUrl(allLinks, ['reservation', 'reserve', 'book', 'table', 'order']);
+      return { type: 'reservation', url: reservationUrl };
+    }
+
+    // Default: contact
+    const contactUrl = this.findBestUrl(navLinks, ['contact', 'get-in-touch', 'reach-out']);
+    return { type: 'contact', url: contactUrl };
+  },
+
+  // Find best matching URL from links with relevance scoring
+  findBestUrl(links, keywords) {
+    const scoredMatches = [];
+
+    links.forEach(link => {
+      const href = (link.getAttribute('href') || '').toLowerCase();
+      const text = link.textContent.toLowerCase();
+      let score = 0;
+
+      // Skip invalid links
+      if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+        return;
+      }
+
+      // Score based on keyword matches
+      keywords.forEach((keyword, index) => {
+        const keywordScore = keywords.length - index; // Earlier keywords are more important
+
+        // Exact match in URL path (highest priority)
+        if (href.includes(`/${keyword}`) || href.includes(`${keyword}/`) || href.endsWith(`/${keyword}`)) {
+          score += keywordScore * 10;
+        }
+        // Keyword in URL (medium priority)
+        else if (href.includes(keyword)) {
+          score += keywordScore * 5;
+        }
+        // Exact match in link text (good priority)
+        if (text === keyword || text === `${keyword}s`) {
+          score += keywordScore * 7;
+        }
+        // Keyword in link text (lower priority)
+        else if (text.includes(keyword)) {
+          score += keywordScore * 3;
+        }
+      });
+
+      // Bonus for links in main navigation (more prominent)
+      if (link.closest('nav, header, .header, .navigation')) {
+        score += 2;
+      }
+
+      // Bonus for clean URL structures
+      if (href.match(/^\/[a-z-]+$/)) {
+        score += 1;
+      }
+
+      // Penalty for query strings or complex URLs
+      if (href.includes('?') || href.includes('&')) {
+        score -= 2;
+      }
+
+      if (score > 0) {
+        scoredMatches.push({ link, href, score });
+      }
+    });
+
+    // Sort by score (descending) and return best match
+    if (scoredMatches.length > 0) {
+      scoredMatches.sort((a, b) => b.score - a.score);
+      console.log(`For You: URL finding - Best match: ${scoredMatches[0].href} (score: ${scoredMatches[0].score})`);
+      return scoredMatches[0].href;
+    }
+
+    // Fallback: try to find contact page or return anchor
+    const contactLink = links.find(l => {
+      const href = (l.getAttribute('href') || '').toLowerCase();
+      return href.includes('contact') || href.includes('get-in-touch');
+    });
+
+    if (contactLink) {
+      return contactLink.getAttribute('href');
+    }
+
+    // Last resort: create anchor to first keyword
+    console.log(`For You: URL finding - No match found, using fallback: #${keywords[0]}`);
+    return `#${keywords[0]}`;
+  },
+
+  // Generate footer content based on preferences with soft-sell CTAs
+  generateFooterContent(businessProfile, preferences, goal) {
+    const isWarm = preferences.visualStyle === 'warm-welcoming';
+    const isBold = preferences.visualStyle === 'bold-dramatic';
+    const isQuality = preferences.priority === 'quality-craft';
+    const isPersonal = preferences.priority === 'personal-connection';
+
+    let headline, cta;
+    const ctaUrl = goal.url;
+
+    switch (goal.type) {
+      case 'sports_registration':
+        // Soft-sell: View programs/training options before registering
+        headline = isWarm ? 'Find the perfect program for your goals' :
+                   isBold ? 'Take your game to the next level' :
+                   isQuality ? 'Excellence in training and development' :
+                   isPersonal ? 'Discover programs designed for you' :
+                   'See what we offer';
+        cta = isWarm ? 'See Training Options' :
+              isBold ? 'Explore Programs' :
+              isQuality ? 'View Our Training' :
+              'Browse Programs';
+        break;
+
+      case 'education_enrollment':
+        // Soft-sell: Browse courses/classes before enrolling
+        headline = isWarm ? 'Your learning journey starts here' :
+                   isBold ? 'Master new skills with expert guidance' :
+                   isQuality ? 'Education that makes a difference' :
+                   isPersonal ? 'Find the right path for you' :
+                   'Discover our courses';
+        cta = isWarm ? 'Browse Classes' :
+              isBold ? 'View Programs' :
+              isQuality ? 'See Course Options' :
+              'Explore Learning';
+        break;
+
+      case 'event_registration':
+        // Soft-sell: View events before registering
+        headline = isWarm ? 'Join us for something memorable' :
+                   isBold ? 'Experience events that inspire' :
+                   isQuality ? 'Thoughtfully curated experiences' :
+                   isPersonal ? 'Find your next great experience' :
+                   'See what\'s coming up';
+        cta = isWarm ? 'View Events' :
+              isBold ? 'See Schedule' :
+              isQuality ? 'Browse Events' :
+              'Explore Upcoming';
+        break;
+
+      case 'booking':
+        // Soft-sell: Explore possibilities before committing
+        headline = isWarm ? 'Curious what we could create together?' :
+                   isBold ? 'Imagine your vision brought to life' :
+                   isPersonal ? 'Let\'s explore your ideas' :
+                   'See what\'s possible for you';
+        cta = isWarm ? 'Explore Appointments' :
+              isBold ? 'View Our Work' :
+              isQuality ? 'See Our Process' :
+              'Learn More';
+        break;
+
+      case 'purchase':
+        // Soft-sell: Browse before buying
+        headline = isWarm ? 'Something special is waiting for you' :
+                   isBold ? 'Discover pieces that inspire' :
+                   isQuality ? 'Explore exceptional craftsmanship' :
+                   'Find what speaks to you';
+        cta = isWarm ? 'Browse Collection' :
+              isBold ? 'View Products' :
+              isQuality ? 'Explore Quality' :
+              'See What\'s New';
+        break;
+
+      case 'inquiry':
+        // Soft-sell: Look at work before committing to project
+        headline = isWarm ? 'Imagine what we could build together' :
+                   isBold ? 'Your next project deserves excellence' :
+                   isPersonal ? 'Every project tells a story' :
+                   'See what we create for clients like you';
+        cta = isWarm ? 'View Our Work' :
+              isBold ? 'Explore Projects' :
+              isQuality ? 'See Our Craft' :
+              'Browse Portfolio';
+        break;
+
+      case 'reservation':
+        // Soft-sell: See menu/experience before booking
+        headline = isWarm ? 'Come experience something special' :
+                   isBold ? 'An extraordinary meal awaits' :
+                   isQuality ? 'Discover culinary excellence' :
+                   'See what makes us different';
+        cta = isWarm ? 'View Menu' :
+              isBold ? 'Explore Experience' :
+              isQuality ? 'See Our Offerings' :
+              'Browse Menu';
+        break;
+
+      default: // contact
+        // Soft-sell: Learn more before reaching out
+        headline = isWarm ? 'Questions? We\'re here to help' :
+                   isBold ? 'Take the first step today' :
+                   isPersonal ? 'Let\'s start a conversation' :
+                   'Wondering if we\'re the right fit?';
+        cta = isWarm ? 'Learn More' :
+              isBold ? 'See How We Help' :
+              isQuality ? 'Explore Our Approach' :
+              'Get in Touch';
+    }
+
+    return { headline, cta, ctaUrl };
   },
 
   // Utility: wait

@@ -262,10 +262,249 @@
     // Inject into page
     document.body.appendChild(forYouModule);
 
+    // Apply brand-tinted frosted glass styling
+    applyBrandTintToModule();
+
+    // Apply brand color to toggle
+    applyBrandColorToToggle();
+
     // Setup scroll behavior
     setupScrollBehavior();
 
     console.log('For You: Module injected');
+  }
+
+  // Apply brand accent color tint to module
+  function applyBrandTintToModule() {
+    try {
+      // Extract brand accent color from site's color palette
+      const brandColor = extractBrandAccentColor();
+      console.log('For You: Extracted brand color:', brandColor);
+
+      if (brandColor) {
+        const module = document.getElementById('for-you-module');
+        const moduleText = module?.querySelector('.for-you-text');
+        if (module && moduleText) {
+          // Parse RGB from brand color
+          const rgb = parseColorToRGB(brandColor);
+          if (rgb) {
+            // Darken brand color by 50% for better contrast
+            const darkR = Math.round(rgb.r * 0.5);
+            const darkG = Math.round(rgb.g * 0.5);
+            const darkB = Math.round(rgb.b * 0.5);
+
+            // Apply black overlay + brand tint for guaranteed contrast
+            module.style.background = `
+              linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+              rgba(${darkR}, ${darkG}, ${darkB}, 0.7)
+            `;
+            module.style.backdropFilter = 'blur(20px) saturate(180%)';
+            module.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
+            module.style.border = `1px solid rgba(${darkR}, ${darkG}, ${darkB}, 0.6)`;
+
+            // White text with shadow for maximum readability
+            moduleText.style.color = '#ffffff';
+            moduleText.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.3)';
+
+            console.log('For You: Brand tint applied with high contrast');
+          }
+        }
+      }
+    } catch (error) {
+      console.log('For You: Could not apply brand tint', error);
+    }
+  }
+
+  // Apply brand color to toggle (on state)
+  function applyBrandColorToToggle() {
+    try {
+      const brandColor = extractBrandAccentColor();
+
+      if (brandColor) {
+        const rgb = parseColorToRGB(brandColor);
+        if (rgb) {
+          // Ensure sufficient contrast with white toggle knob
+          // Calculate luminance to determine if color is light or dark
+          const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
+
+          // If color is too light (poor contrast with white), darken it
+          let toggleR = rgb.r;
+          let toggleG = rgb.g;
+          let toggleB = rgb.b;
+
+          if (luminance > 0.6) {
+            // Color is too light, darken by 40%
+            toggleR = Math.round(rgb.r * 0.6);
+            toggleG = Math.round(rgb.g * 0.6);
+            toggleB = Math.round(rgb.b * 0.6);
+          }
+
+          // Apply to toggle via CSS custom property
+          const toggle = document.querySelector('.for-you-toggle');
+          if (toggle) {
+            toggle.style.setProperty('--brand-toggle-color', `rgb(${toggleR}, ${toggleG}, ${toggleB})`);
+          }
+
+          console.log('For You: Brand color applied to toggle');
+        }
+      }
+    } catch (error) {
+      console.log('For You: Could not apply brand color to toggle', error);
+    }
+  }
+
+  // Extract brand accent color from site's color palette
+  function extractBrandAccentColor() {
+    const colorCandidates = [];
+
+    // 1. Scan primary brand elements (buttons, CTAs, headers, logos)
+    const brandElements = [
+      // Primary CTAs and buttons (highest priority)
+      ...document.querySelectorAll('.sqs-block-button-element, .btn, button, a[class*="button"], [class*="cta"]'),
+      // Header/nav area (often has brand colors)
+      ...document.querySelectorAll('header, nav, .header, .navigation, [class*="nav"]'),
+      // Logo area
+      ...document.querySelectorAll('[class*="logo"], .branding, .site-title'),
+      // Links (brand accent often visible here)
+      ...document.querySelectorAll('a[href]')
+    ];
+
+    // Collect colors from all brand elements
+    brandElements.slice(0, 50).forEach(element => {
+      const computed = getComputedStyle(element);
+
+      // Check background color
+      const bgColor = computed.backgroundColor;
+      if (bgColor && bgColor !== 'transparent' && !bgColor.includes('rgba(0, 0, 0, 0)')) {
+        const rgb = parseColorToRGB(bgColor);
+        if (rgb && !isGrayscale(rgb) && !isTooLight(rgb) && !isTooDark(rgb)) {
+          colorCandidates.push({ color: bgColor, rgb, score: 0 });
+        }
+      }
+
+      // Check text/foreground color
+      const textColor = computed.color;
+      if (textColor) {
+        const rgb = parseColorToRGB(textColor);
+        if (rgb && !isGrayscale(rgb) && !isTooLight(rgb)) {
+          colorCandidates.push({ color: textColor, rgb, score: 0 });
+        }
+      }
+
+      // Check border color (sometimes brand accent)
+      const borderColor = computed.borderColor;
+      if (borderColor && borderColor !== 'transparent') {
+        const rgb = parseColorToRGB(borderColor);
+        if (rgb && !isGrayscale(rgb) && !isTooLight(rgb)) {
+          colorCandidates.push({ color: borderColor, rgb, score: 0 });
+        }
+      }
+    });
+
+    if (colorCandidates.length === 0) {
+      console.log('For You: No brand colors found, using default');
+      return 'rgb(52, 199, 89)'; // iOS green fallback
+    }
+
+    // Score colors by frequency (most common brand color)
+    const colorMap = new Map();
+    colorCandidates.forEach(candidate => {
+      const key = `${candidate.rgb.r},${candidate.rgb.g},${candidate.rgb.b}`;
+      if (colorMap.has(key)) {
+        colorMap.get(key).count++;
+      } else {
+        colorMap.set(key, { ...candidate, count: 1 });
+      }
+    });
+
+    // Find most frequent saturated color
+    let bestColor = null;
+    let bestScore = 0;
+
+    colorMap.forEach(colorData => {
+      const saturation = calculateSaturation(colorData.rgb);
+      const score = colorData.count * saturation; // Frequency × saturation
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestColor = colorData.color;
+      }
+    });
+
+    console.log('For You: Found brand color with score:', bestScore);
+    return bestColor || 'rgb(52, 199, 89)';
+  }
+
+  // Parse color string to RGB object
+  function parseColorToRGB(colorString) {
+    if (!colorString) return null;
+
+    // Match rgb/rgba format
+    const rgbMatch = colorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (rgbMatch) {
+      return {
+        r: parseInt(rgbMatch[1]),
+        g: parseInt(rgbMatch[2]),
+        b: parseInt(rgbMatch[3])
+      };
+    }
+
+    // Match hex format
+    const hexMatch = colorString.match(/#([0-9a-f]{6})/i);
+    if (hexMatch) {
+      const hex = hexMatch[1];
+      return {
+        r: parseInt(hex.substr(0, 2), 16),
+        g: parseInt(hex.substr(2, 2), 16),
+        b: parseInt(hex.substr(4, 2), 16)
+      };
+    }
+
+    return null;
+  }
+
+  // Check if color is grayscale (to avoid using boring colors)
+  function isGrayscale(rgb) {
+    const threshold = 15;
+    return Math.abs(rgb.r - rgb.g) < threshold &&
+           Math.abs(rgb.g - rgb.b) < threshold &&
+           Math.abs(rgb.r - rgb.b) < threshold;
+  }
+
+  // Check if color is too light (near white)
+  function isTooLight(rgb) {
+    const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
+    return luminance > 0.95;
+  }
+
+  // Check if color is too dark (near black)
+  function isTooDark(rgb) {
+    const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
+    return luminance < 0.05;
+  }
+
+  // Calculate relative luminance (WCAG formula)
+  function calculateLuminance(r, g, b) {
+    // Convert to 0-1 range
+    const [rs, gs, bs] = [r, g, b].map(c => {
+      const val = c / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  }
+
+  // Calculate color saturation (0-1)
+  function calculateSaturation(rgb) {
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    if (max === 0) return 0;
+    return delta / max;
   }
 
   // Handle toggle click
