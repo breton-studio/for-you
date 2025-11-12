@@ -1477,9 +1477,10 @@ const ForYouPersonalization = {
 
     // SPECIAL CASE: Hero elements should be more lenient
     // Hero sections often have overflow:hidden intentionally for design purposes
+    // Headlines and buttons in hero sections typically have more intentional styling
     const heroSection = this.findElement(this.SELECTORS.hero);
     const isHeroElement = heroSection && element.closest('section') === heroSection;
-    const tolerance = isHeroElement ? 20 : 5;  // More tolerance for hero elements
+    const tolerance = isHeroElement ? 40 : 5;  // Much more tolerance for hero elements
 
     // Check for horizontal overflow
     if (element.scrollWidth > element.clientWidth + tolerance) {
@@ -1596,8 +1597,9 @@ const ForYouPersonalization = {
 
       await this.wait(150);
 
-      // Clean up
+      // Clean up - clear inline styles to restore CSS control
       element.style.transition = '';
+      element.style.opacity = '';  // Clear inline opacity
 
     } catch (error) {
       // ERROR RECOVERY: Restore opacity if animation fails
@@ -2298,6 +2300,10 @@ const ForYouPersonalization = {
         } else {
           element.textContent = originalText;
         }
+
+        // Clear all inline styles applied during animation to prevent visibility issues
+        element.style.opacity = '';
+        element.style.transition = '';
 
         delete element.dataset.forYouModified;
         delete element.dataset.forYouOriginalText;
