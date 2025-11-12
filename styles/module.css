@@ -80,6 +80,26 @@
   transform: translateX(16px);
 }
 
+/* Loading state - toggle midway with pulsing background */
+.for-you-toggle.loading {
+  background: var(--brand-toggle-color, #34C759);
+  animation: togglePulse 1.5s ease-in-out infinite;
+}
+
+.for-you-toggle.loading::after {
+  transform: translateX(8px); /* Midway position */
+}
+
+/* Pulsing animation for loading state */
+@keyframes togglePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* Dark mode - automatic system preference detection */
 @media (prefers-color-scheme: dark) {
   .for-you-module {

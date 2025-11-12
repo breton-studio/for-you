@@ -525,7 +525,7 @@
     try {
       if (isCurrentlyOn) {
         // Turn OFF - remove personalization
-        toggle.classList.remove('on');
+        toggle.classList.remove('on', 'loading');
         toggle.setAttribute('aria-checked', 'false');
         await ForYouStorage.saveToggleState(false);
 
@@ -539,12 +539,16 @@
 
         if (hasPreferences) {
           // User has preferences - apply them
-          toggle.classList.add('on');
+          toggle.classList.add('loading');
           toggle.setAttribute('aria-checked', 'true');
           await ForYouStorage.saveToggleState(true);
 
           const preferences = await ForYouStorage.getPreferences();
           await ForYouPersonalization.executeTransformation(preferences);
+
+          // Complete the animation
+          toggle.classList.remove('loading');
+          toggle.classList.add('on');
 
           console.log('For You: Personalization enabled');
         } else {

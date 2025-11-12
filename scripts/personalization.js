@@ -2187,29 +2187,58 @@ const ForYouPersonalization = {
       }
 
       // Get original constraints
-      const originalText = element.textContent;
+      const originalText = element.textContent.trim();
       const constraints = this.calculateLengthConstraints(element, originalText);
       const elementType = this.getElementType(element);
 
-      // Verify modification fits
-      if (mod.modified.length > constraints.maxLength) {
-        console.warn(`For You: Modification too long (${mod.modified.length} > ${constraints.maxLength}) for ${elementType}, skipping "${mod.modified}"`);
+      // Validate modification quality
+      const modifiedTrimmed = mod.modified.trim();
+
+      // Skip empty or whitespace-only modifications
+      if (!modifiedTrimmed || modifiedTrimmed.length === 0) {
+        console.warn(`For You: Empty modification for ${mod.id}, skipping`);
         continue;
       }
 
-      if (mod.modified.length < constraints.minLength) {
-        // Accept even if below min, as long as it's not extremely short (>5 chars)
-        if (mod.modified.length >= 5) {
-          console.log(`For You: Modification shorter than min but acceptable (${mod.modified.length} vs ${constraints.minLength})`);
+      // Skip obviously truncated/nonsense text (incomplete words, too short for original length)
+      if (modifiedTrimmed.length < 10 && originalText.length > 20) {
+        console.warn(`For You: Modification suspiciously short (${modifiedTrimmed.length} chars vs original ${originalText.length} chars), likely truncated. Skipping: "${modifiedTrimmed}"`);
+        continue;
+      }
+
+      // Check for incomplete words (text ending with partial word - no space before last 5 chars)
+      const lastFiveChars = modifiedTrimmed.slice(-5);
+      if (modifiedTrimmed.length > 5 && !lastFiveChars.includes(' ') && !/[.!?]$/.test(modifiedTrimmed)) {
+        // This might be a truncated word like "A tho" or "Thoughful craf"
+        const words = modifiedTrimmed.split(' ');
+        const lastWord = words[words.length - 1];
+
+        // If last word is very short (< 3 chars) and doesn't look like a real word, it's likely truncated
+        if (lastWord.length > 0 && lastWord.length < 3 && words.length > 1) {
+          console.warn(`For You: Modification appears truncated (ends with "${lastWord}"). Skipping: "${modifiedTrimmed}"`);
+          continue;
+        }
+      }
+
+      // Verify modification fits length constraints
+      if (modifiedTrimmed.length > constraints.maxLength) {
+        console.warn(`For You: Modification too long (${modifiedTrimmed.length} > ${constraints.maxLength}) for ${elementType}, skipping "${modifiedTrimmed}"`);
+        continue;
+      }
+
+      if (modifiedTrimmed.length < constraints.minLength) {
+        // Accept even if below min, as long as it's not extremely short (>8 chars for safety)
+        if (modifiedTrimmed.length >= 8) {
+          console.log(`For You: Modification shorter than min but acceptable (${modifiedTrimmed.length} vs ${constraints.minLength})`);
         } else {
-          console.warn(`For You: Modification too short (${mod.modified.length} < 5 chars), skipping`);
+          console.warn(`For You: Modification too short (${modifiedTrimmed.length} < 8 chars minimum), skipping "${modifiedTrimmed}"`);
           continue;
         }
       }
 
       // Log constraint details for CTAs (buttons) to help debug clipping
       if (elementType === 'cta') {
-        console.log(`For You: CTA constraint check - Original: "${originalText}" (${originalText.length} chars), Modified: "${mod.modified}" (${mod.modified.length} chars), Max: ${constraints.maxLength}`);
+        console.log(`For You: CTA constraint check - Original: "${originalText}" (${originalText.length} chars), Modified: "${modifiedTrimmed}" (${modifiedTrimmed.length} chars), Max: ${constraints.maxLength}`);
       }
 
       // Store original
@@ -2217,7 +2246,7 @@ const ForYouPersonalization = {
       element.dataset.forYouModified = 'true';
 
       // Apply with animation
-      await this.animateTextChange(element, mod.modified);
+      await this.animateTextChange(element, modifiedTrimmed);
 
       // Verify visual layout after change
       await this.wait(100); // Let layout settle

@@ -139,9 +139,9 @@ const ForYouQuiz = {
   renderDoneScreen() {
     return `
       <div class="quiz-done">
-        <h2>Perfect!</h2>
+        <h2>Done</h2>
         <p>Your experience is ready</p>
-        <button class="cta-button" id="quiz-done-button">See Your Personalized Site</button>
+        <button class="cta-button" id="quiz-done-button">See Your Site</button>
       </div>
     `;
   },
@@ -195,6 +195,13 @@ const ForYouQuiz = {
     // Dismiss modal
     await this.dismiss();
 
+    // Set toggle to loading state (midway with pulsing)
+    const toggle = document.querySelector('.for-you-toggle');
+    if (toggle) {
+      toggle.classList.add('loading');
+      console.log('[For You] Toggle set to loading state');
+    }
+
     // Check if background crawl is still in progress
     if (window.ForYouCrawl && window.ForYouCrawl.isInProgress()) {
       console.log('');
@@ -234,10 +241,11 @@ const ForYouQuiz = {
       window.ForYouDebugOverlay.update('status', 'Status: Personalization active');
     }
 
-    // Update module toggle state
-    const toggle = document.querySelector('.for-you-toggle');
+    // Remove loading state and complete toggle animation
     if (toggle) {
+      toggle.classList.remove('loading');
       toggle.classList.add('on');
+      console.log('[For You] Toggle animation completed');
     }
   },
 

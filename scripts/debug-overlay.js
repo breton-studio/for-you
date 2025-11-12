@@ -23,7 +23,7 @@ const ForYouDebugOverlay = {
       font-size: 11px;
       padding: 10px 12px;
       border-radius: 8px;
-      z-index: 999999;
+      z-index: 9999999;
       min-width: 250px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       line-height: 1.4;
