@@ -1597,9 +1597,10 @@ const ForYouPersonalization = {
 
       await this.wait(150);
 
-      // Clean up - clear inline styles to restore CSS control
+      // Clean up - use !important to prevent site animations from interfering
       element.style.transition = '';
-      element.style.opacity = '';  // Clear inline opacity
+      element.style.setProperty('opacity', '1', 'important');  // Force visibility
+      element.style.setProperty('visibility', 'visible', 'important');  // Extra safety
 
     } catch (error) {
       // ERROR RECOVERY: Restore opacity if animation fails
@@ -2301,8 +2302,9 @@ const ForYouPersonalization = {
           element.textContent = originalText;
         }
 
-        // Clear all inline styles applied during animation to prevent visibility issues
-        element.style.opacity = '';
+        // Force visibility with !important to prevent site animations from hiding elements
+        element.style.setProperty('opacity', '1', 'important');
+        element.style.setProperty('visibility', 'visible', 'important');
         element.style.transition = '';
 
         delete element.dataset.forYouModified;
@@ -2812,7 +2814,8 @@ const ForYouPersonalization = {
 
           setTimeout(() => {
             element.textContent = originalText;
-            element.style.opacity = '';
+            element.style.setProperty('opacity', '1', 'important');
+            element.style.setProperty('visibility', 'visible', 'important');
             element.style.transition = '';
             delete element.dataset.forYouOriginalText;
             delete element.dataset.forYouModified;
