@@ -960,15 +960,17 @@ const ForYouPersonalization = {
       return bestColor;
     }
 
-    // Fallback to black or white - choose whichever has better contrast
+    // Fallback to black or white based on background luminance
+    const bgLuminance = this.calculateLuminance(backgroundColor);
     const blackContrast = this.calculateContrastRatio(backgroundColor, '#000000');
     const whiteContrast = this.calculateContrastRatio(backgroundColor, '#ffffff');
 
-    // Choose the color with better contrast
-    const fallback = whiteContrast > blackContrast ? '#ffffff' : '#000000';
-    const fallbackContrast = Math.max(blackContrast, whiteContrast);
+    // For dark or saturated backgrounds (luminance < 0.5), always use white
+    // For light backgrounds (luminance >= 0.5), always use black
+    const fallback = bgLuminance < 0.5 ? '#ffffff' : '#000000';
+    const fallbackContrast = bgLuminance < 0.5 ? whiteContrast : blackContrast;
 
-    console.log(`[Footer] No sufficient brand color found, using fallback: ${fallback} (${fallbackContrast.toFixed(2)}:1 contrast)`);
+    console.log(`[Footer] No sufficient brand color found, using fallback: ${fallback} (bg luminance: ${bgLuminance.toFixed(3)}, contrast: ${fallbackContrast.toFixed(2)}:1)`);
     return fallback;
   },
 
@@ -3066,6 +3068,9 @@ const ForYouPersonalization = {
     await this.yieldToEventLoop();
     enhanced.sampleTextMultiPage = this.getMultiPageSampleText(contentInventory);
 
+    // Add inventory for product page detection
+    enhanced.inventory = contentInventory;
+
     console.log('[ForYouPersonalization] Enhanced business profile built:', enhanced);
     return enhanced;
   },
@@ -3135,10 +3140,13 @@ const ForYouPersonalization = {
     };
 
     for (const page of catalogPages) {
-      // Extract service/product names from H2/H3 headings
+      // Extract service/product names from H2/H3 headings with URLs
       for (const h of page.headings) {
         if (h.level === 'h2' || h.level === 'h3') {
-          catalog.items.push(h.text);
+          catalog.items.push({
+            name: h.text,
+            url: page.url
+          });
         }
       }
 
@@ -3149,8 +3157,15 @@ const ForYouPersonalization = {
       await this.yieldToEventLoop();
     }
 
-    // Limit to reasonable size
-    catalog.items = [...new Set(catalog.items)].slice(0, 10); // Dedupe and limit
+    // Limit to reasonable size and dedupe by name
+    const seenNames = new Set();
+    catalog.items = catalog.items
+      .filter(item => {
+        if (seenNames.has(item.name)) return false;
+        seenNames.add(item.name);
+        return true;
+      })
+      .slice(0, 10);
     catalog.descriptions = catalog.descriptions.slice(0, 8);
 
     return catalog;
