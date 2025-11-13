@@ -17,11 +17,19 @@ const ForYouPersonalization = {
       'section'
     ],
     hero: [
+      // Traditional Squarespace selectors
       'section:first-of-type',
       '.page-section:first-of-type',
       '[data-section-id]:first-of-type',
       '#page section:first-child',
-      'section:first-child'
+      'section:first-child',
+      // Squarespace 7.1+ Flex Grid selectors
+      'main > div:first-of-type',
+      '[class*="fe-"]:first-of-type',
+      '.sqs-layout:first-of-type',
+      // Generic fallback selectors
+      '#page > div:first-of-type',
+      'body main > *:first-child'
     ],
     headings: ['h1', 'h2', '.sqs-block h1', '.sqs-block h2'],
     body: ['p', '.sqs-block-content p', '.sqs-html-content p'],
@@ -80,6 +88,25 @@ const ForYouPersonalization = {
       if (element) return element;
     }
     return null;
+  },
+
+  // Ensure hero section is marked and protected
+  ensureHeroMarked() {
+    // First check if already marked
+    const markedHero = document.querySelector('[data-for-you-is-hero="true"]');
+    if (markedHero) {
+      return markedHero;
+    }
+
+    // Try to find hero using selectors
+    const heroSection = this.findElement(this.SELECTORS.hero);
+    if (heroSection && !heroSection.dataset.forYouIsHero) {
+      heroSection.dataset.forYouIsHero = 'true';
+      heroSection.classList.add('for-you-hero-section');
+      console.log('[For You] Hero section detected and marked:', heroSection);
+    }
+
+    return heroSection;
   },
 
   // Find all elements with fallbacks
@@ -724,9 +751,14 @@ const ForYouPersonalization = {
     const images = section.querySelectorAll('img').length;
     const hasGallery = section.querySelector('.gallery, .portfolio, .sqs-gallery') !== null;
 
-    // Hero detection - check both exact match AND if section contains hero
-    // This handles cases where parent containers are being checked
-    const heroElement = this.findElement(this.SELECTORS.hero);
+    // Hero detection - check marked hero first, then selector-based detection
+    // Check if section is already marked as hero
+    if (section.dataset.forYouIsHero === 'true' || section.classList.contains('for-you-hero-section')) {
+      return this.SECTION_TYPES.HERO;
+    }
+
+    // Ensure hero is marked and check if this section is it
+    const heroElement = this.ensureHeroMarked();
     if (section === heroElement || (heroElement && section.contains(heroElement))) {
       return this.SECTION_TYPES.HERO;
     }
@@ -913,14 +945,29 @@ const ForYouPersonalization = {
 
   // Reorder page sections
   async reorderPageSections(preferences) {
-    // CRITICAL: Exclude hero section from filtering - it must always remain visible
-    const heroSection = this.findElement(this.SELECTORS.hero);
+    // CRITICAL: Ensure hero is marked and exclude from filtering - it must always remain visible
+    const heroSection = this.ensureHeroMarked();
 
     const sections = Array.from(this.findAllElements(this.SELECTORS.sections))
-      .filter(s => !s.classList.contains('for-you-intro-section') &&
-                   !s.classList.contains('for-you-final-cta') &&
-                   s !== heroSection &&  // Never hide hero section
-                   s.offsetHeight > 50); // Skip tiny sections
+      .filter((s, index) => {
+        // Always protect hero section
+        if (s === heroSection || s.dataset.forYouIsHero === 'true' || s.classList.contains('for-you-hero-section')) {
+          return false;
+        }
+
+        // Defensive: If no hero detected, protect first visible section as fallback
+        if (!heroSection && index === 0 && s.offsetHeight > 50) {
+          console.log('[For You] No hero detected - protecting first section as fallback');
+          s.dataset.forYouIsHero = 'true';
+          s.classList.add('for-you-hero-section');
+          return false;
+        }
+
+        // Filter out our injected sections and tiny sections
+        return !s.classList.contains('for-you-intro-section') &&
+               !s.classList.contains('for-you-final-cta') &&
+               s.offsetHeight > 50;
+      });
 
     if (sections.length < 2) {
       console.log('For You: Not enough sections to reorder');
@@ -1352,8 +1399,13 @@ const ForYouPersonalization = {
   // Filter repeated content in a section (keep top 3 of 6+)
   async filterRepeatedContent(section, sectionType, preferences) {
     // CRITICAL: Never filter content in hero section - hero elements must always remain visible
-    // Double-check: also verify section doesn't contain hero element (defensive against detection failures)
-    const heroElement = this.findElement(this.SELECTORS.hero);
+    // Check if section is marked as hero or contains hero element
+    if (section.dataset.forYouIsHero === 'true' || section.classList.contains('for-you-hero-section')) {
+      console.log('For You: Skipping filterRepeatedContent - section is marked as hero');
+      return;
+    }
+
+    const heroElement = this.ensureHeroMarked();
     if (section === heroElement || (heroElement && section.contains(heroElement))) {
       console.log('For You: Skipping filterRepeatedContent - section contains hero element');
       return;
@@ -3089,22 +3141,8 @@ const ForYouPersonalization = {
       offering = `offering ${businessProfile.catalog.type === 'products' ? 'products' : 'services'} like ${items}`;
     }
 
-    // Build unique value from value props
-    const valueProps = businessProfile.valuePropsDetailed || businessProfile.valueProps?.emphasis;
-    if (valueProps) {
-      if (valueProps.quality > 60) {
-        uniqueValue = 'exceptional quality and craftsmanship';
-      } else if (valueProps.personal > 60) {
-        uniqueValue = 'personal attention and meaningful connections';
-      } else if (valueProps.expertise > 60) {
-        uniqueValue = 'deep expertise and proven experience';
-      } else {
-        uniqueValue = 'a balanced approach to excellence';
-      }
-    }
-
-    // Generate dynamic, authentic story using LLM
-    const story = await this.buildDynamicStory(businessProfile, origin, uniqueValue, offering, preferences);
+    // Generate dynamic, authentic story using LLM (let LLM extract unique value from content)
+    const story = await this.buildDynamicStory(businessProfile, origin, offering, preferences);
 
     return {
       story: story,
@@ -3114,46 +3152,67 @@ const ForYouPersonalization = {
   },
 
   // Build brand story dynamically using LLM for authentic, interesting narratives
-  async buildDynamicStory(profile, origin, uniqueValue, offering, preferences) {
+  async buildDynamicStory(profile, origin, offering, preferences) {
     const vertical = profile.vertical || 'business';
-    const name = this.extractBusinessName(profile);
     const years = this.extractYearsInBusiness(profile);
 
-    // Compile business context for LLM
+    // Compile business context for LLM with specific details
     const context = {
-      name: name,
       vertical: vertical,
       years: years,
       origin: origin,
-      uniqueValue: uniqueValue,
       offering: offering,
-      aboutText: profile.aboutNarrative?.firstParagraphs?.join(' ').substring(0, 300) || '',
+      aboutText: profile.aboutNarrative?.paragraphs?.join(' ').substring(0, 400) || '',
+      aboutHeading: profile.aboutNarrative?.mainHeading || '',
+      keyPhrases: profile.aboutNarrative?.keyPhrases?.slice(0, 5).join(', ') || '',
+      catalogDescriptions: profile.catalog?.descriptions?.slice(0, 2).join(' ').substring(0, 250) || '',
+      teamHeadings: profile.teamInfo?.teamHeadings?.slice(0, 3).join('; ') || '',
       themes: profile.contentThemes?.dominant?.slice(0, 3).join(', ') || '',
-      valueProps: profile.valuePropsDetailed || {},
       brandVoice: profile.brandVoice || 'professional',
       personality: profile.brandAdjectives?.slice(0, 3).join(', ') || ''
     };
 
-    // Build prompt for authentic story generation
-    const prompt = `Write a compelling, authentic brand story in first-person voice (as if the founder is speaking). Keep it 3-5 sentences maximum.
+    // Build prompt for authentic story generation with strict specificity requirements
+    const prompt = `Write a compelling, authentic brand story in first-person voice (as if the founder is speaking). Keep it 2-4 sentences maximum.
 
 Business Context:
-- Name: ${context.name}
 - Industry: ${context.vertical}
 ${context.years ? `- Years in business: ${context.years}` : ''}
-${context.aboutText ? `- About: ${context.aboutText}` : ''}
+${context.aboutHeading ? `- About page heading: "${context.aboutHeading}"` : ''}
+${context.aboutText ? `- About content: ${context.aboutText}` : ''}
+${context.catalogDescriptions ? `- Product/Service details: ${context.catalogDescriptions}` : ''}
+${context.teamHeadings ? `- Team/Leadership: ${context.teamHeadings}` : ''}
 ${context.offering ? `- Offerings: ${context.offering}` : ''}
+${context.keyPhrases ? `- Business-specific language: ${context.keyPhrases}` : ''}
 ${context.themes ? `- Focus areas: ${context.themes}` : ''}
 
 Voice Style: ${context.brandVoice}, ${context.personality}
 
-Requirements:
+CRITICAL REQUIREMENTS:
 - Write in first-person ("I" or "we") as if the founder is speaking directly
-- Be genuine and specific - avoid generic business clichés
-- Focus on what makes this business unique and interesting
-- Keep it conversational and authentic
-- NO phrases like: "exceptional quality", "staying committed", "what people appreciate", "been that way since"
-- Make it compelling enough that someone would want to learn more
+- MUST reference at least 2 SPECIFIC details from the business context above (names, products, dates, founding stories, collaborations, unique processes)
+- Use the business's own language from their content - incorporate their key phrases naturally
+- Be concrete and specific - avoid all generic business speak and marketing jargon
+- Keep it conversational and authentic, like a real person talking about their work
+
+ABSOLUTELY FORBIDDEN PHRASES (do not use any variation of these):
+- "exceptional quality" / "quality craftsmanship" / "highest quality"
+- "passionate about" / "passion for"
+- "committed to" / "staying committed" / "commitment to excellence"
+- "what people appreciate" / "what customers love"
+- "been that way since"
+- "world-class" / "best-in-class" / "industry-leading"
+- "cutting-edge" / "innovative solutions"
+- "one-stop-shop" / "full-service"
+- "tailored solutions" / "customized approach"
+- "dedicated team" / "expert team"
+- "going above and beyond" / "exceed expectations"
+- "elevate your experience"
+- "seamless" / "streamlined"
+- "unparalleled" / "unmatched"
+- "pride ourselves on"
+
+Instead: Reference actual specifics like founder names, founding year, specific products/services mentioned, collaborations, locations, unique methods, or personal stories from the About content.
 
 Story:`;
 
@@ -3172,7 +3231,7 @@ Story:`;
 
       if (!response.ok) {
         console.error('[For You] Story generation API failed, falling back to simple version');
-        return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+        return this.buildSimpleFallbackStory(profile, origin, offering);
       }
 
       const data = await response.json();
@@ -3183,25 +3242,24 @@ Story:`;
         return story;
       } else {
         console.warn('[For You] Generated story quality issue, using fallback');
-        return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+        return this.buildSimpleFallbackStory(profile, origin, offering);
       }
 
     } catch (error) {
       console.error('[For You] Error generating dynamic story:', error);
-      return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+      return this.buildSimpleFallbackStory(profile, origin, offering);
     }
   },
 
   // Simple fallback if LLM fails
-  buildSimpleFallbackStory(profile, origin, uniqueValue, offering) {
-    const name = this.extractBusinessName(profile);
+  buildSimpleFallbackStory(profile, origin, offering) {
     const vertical = profile.vertical || 'business';
 
     if (origin) {
-      return `${origin} ${offering ? `We're ${offering}.` : ''} That's our story.`;
+      return `${origin} ${offering ? `We're ${offering}.` : ''} That's what we do.`;
     }
 
-    return `We're ${name}, working in ${vertical}. ${offering ? `${offering.charAt(0).toUpperCase() + offering.slice(1)}.` : ''} We focus on what matters most to our customers.`;
+    return `We're a ${vertical}. ${offering ? `${offering.charAt(0).toUpperCase() + offering.slice(1)}.` : ''} We focus on doing good work.`;
   },
 
   // Extract business name from profile
