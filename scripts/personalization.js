@@ -63,6 +63,14 @@ const ForYouPersonalization = {
     'stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch',
     // Common single-word section headers
     'info', 'details', 'about', 'description', 'overview', 'features', 'reviews', 'faq', 'policy',
+    // Social media and CTA terms
+    'follow', 'follow us', 'connect', 'share', 'join', 'join us', 'like', 'watch',
+    // Navigation and UI terms
+    'menu', 'navigation', 'search', 'cart', 'checkout', 'shop all', 'view all', 'see more', 'home', 'back',
+    // Support and footer terms
+    'support', 'help', 'legal', 'terms', 'privacy', 'shipping', 'returns',
+    // Common CTA verbs
+    'buy', 'order', 'book', 'reserve', 'download', 'learn', 'discover',
     // Marketing phrase patterns (partial matches)
     'give the gift', 'perfect for', 'great for', 'ideal for'
   ],
