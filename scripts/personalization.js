@@ -1014,16 +1014,27 @@ const ForYouPersonalization = {
   getBestProduct(businessProfile) {
     const catalog = businessProfile.catalog;
 
-    // Try catalog items first
+    // Try catalog items first, but filter out generic titles
     if (catalog?.items && catalog.items.length > 0) {
-      const item = catalog.items[0];
-      // Handle both string items and object items
-      const result = {
-        name: typeof item === 'string' ? item : (item.name || item.title || item),
-        url: typeof item === 'object' ? item.url : null
-      };
-      console.log('[Footer] Using catalog item:', result.name, result.url ? `(URL: ${result.url})` : '(no URL)');
-      return result;
+      const genericTitles = ['stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch'];
+
+      // Find first non-generic catalog item
+      const validItem = catalog.items.find(item => {
+        const name = typeof item === 'string' ? item : (item.name || item.title || item);
+        const nameLower = name.toLowerCase();
+        return !genericTitles.some(generic => nameLower.includes(generic));
+      });
+
+      if (validItem) {
+        const result = {
+          name: typeof validItem === 'string' ? validItem : (validItem.name || validItem.title || validItem),
+          url: typeof validItem === 'object' ? validItem.url : null
+        };
+        console.log('[Footer] Using catalog item:', result.name, result.url ? `(URL: ${result.url})` : '(no URL)');
+        return result;
+      }
+
+      console.log('[Footer] All catalog items were generic, falling through to inventory search');
     }
 
     // Search inventory for product/menu/shop pages
