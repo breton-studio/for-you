@@ -720,11 +720,42 @@ const ForYouPersonalization = {
       fontFamily: styles.typography.body?.fontFamily || 'inherit'
     };
 
-    styles.typography.large = {
-      fontSize: styles.typography.h1?.fontSize || '3rem',
-      fontWeight: styles.typography.h1?.fontWeight || '700',
-      fontFamily: styles.typography.h1?.fontFamily || 'inherit'
-    };
+    // Find the LARGEST heading on the page (not just first H1)
+    const allHeadings = document.querySelectorAll('h1, h2, h3, [class*="heading"], [class*="title"]:not(title), .hero-title, .page-title, .section-title');
+    let largestHeading = null;
+    let largestFontSize = 0;
+
+    allHeadings.forEach(heading => {
+      const computed = getComputedStyle(heading);
+      const fontSize = parseFloat(computed.fontSize);
+
+      if (fontSize > largestFontSize) {
+        largestFontSize = fontSize;
+        largestHeading = {
+          fontSize: computed.fontSize,
+          fontWeight: computed.fontWeight,
+          fontFamily: computed.fontFamily,
+          element: heading.tagName
+        };
+      }
+    });
+
+    if (largestHeading) {
+      console.log(`[Brand Styles] Largest heading found: ${largestHeading.element} with fontSize ${largestHeading.fontSize}`);
+      styles.typography.large = {
+        fontSize: largestHeading.fontSize,
+        fontWeight: largestHeading.fontWeight,
+        fontFamily: largestHeading.fontFamily
+      };
+    } else {
+      // Fallback to H1 or larger default
+      styles.typography.large = {
+        fontSize: styles.typography.h1?.fontSize || '4rem',
+        fontWeight: styles.typography.h1?.fontWeight || '700',
+        fontFamily: styles.typography.h1?.fontFamily || 'inherit'
+      };
+      console.log('[Brand Styles] No large heading found, using fallback: 4rem');
+    }
 
     this.brandStyles = styles;
     return styles;
@@ -784,16 +815,98 @@ const ForYouPersonalization = {
   },
 
   // Get contrasting background color for footer
-  getContrastingBackground(previousSection) {
+  getContrastingBackground(previousSection, brandStyles) {
     if (!previousSection) {
       return '#f8f8f8'; // Default light background
     }
 
     const prevBg = getComputedStyle(previousSection).backgroundColor;
-    const luminance = this.calculateLuminance(prevBg);
+    const prevLuminance = this.calculateLuminance(prevBg);
 
-    // If previous section is light (>0.5), use dark footer; if dark, use light footer
-    return luminance > 0.5 ? '#1a1a1a' : '#f8f8f8';
+    console.log('[Footer] Finding brand-aware contrasting background...');
+    console.log('[Footer] Previous section bg:', prevBg, 'luminance:', prevLuminance.toFixed(3));
+
+    // Collect potential brand background colors from the page
+    const potentialBackgrounds = [];
+
+    // Get all sections and extract their background colors
+    const sections = Array.from(document.querySelectorAll('section, [class*="section"], .page-section, [data-section-id]'));
+    sections.forEach((section, idx) => {
+      const bgColor = getComputedStyle(section).backgroundColor;
+      const lum = this.calculateLuminance(bgColor);
+
+      // Only consider non-transparent backgrounds that are different from previous section
+      if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+        potentialBackgrounds.push({
+          color: bgColor,
+          luminance: lum,
+          source: `section-${idx}`
+        });
+      }
+    });
+
+    // Add navigation background if available
+    const nav = document.querySelector('header, nav, [class*="header"], [class*="navigation"]');
+    if (nav) {
+      const navBg = getComputedStyle(nav).backgroundColor;
+      const navLum = this.calculateLuminance(navBg);
+      if (navBg && navBg !== 'rgba(0, 0, 0, 0)' && navBg !== 'transparent') {
+        potentialBackgrounds.push({
+          color: navBg,
+          luminance: navLum,
+          source: 'navigation'
+        });
+      }
+    }
+
+    // Add body background
+    const bodyBg = getComputedStyle(document.body).backgroundColor;
+    const bodyLum = this.calculateLuminance(bodyBg);
+    if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') {
+      potentialBackgrounds.push({
+        color: bodyBg,
+        luminance: bodyLum,
+        source: 'body'
+      });
+    }
+
+    // Add brand colors if available
+    if (brandStyles) {
+      if (brandStyles.colors.primary && brandStyles.colors.primary !== 'rgba(0, 0, 0, 0)') {
+        potentialBackgrounds.push({
+          color: brandStyles.colors.primary,
+          luminance: this.calculateLuminance(brandStyles.colors.primary),
+          source: 'brand-primary'
+        });
+      }
+      if (brandStyles.colors.sectionBackground && brandStyles.colors.sectionBackground !== 'rgba(0, 0, 0, 0)') {
+        potentialBackgrounds.push({
+          color: brandStyles.colors.sectionBackground,
+          luminance: this.calculateLuminance(brandStyles.colors.sectionBackground),
+          source: 'brand-section'
+        });
+      }
+    }
+
+    console.log(`[Footer] Found ${potentialBackgrounds.length} potential brand backgrounds`);
+
+    // Find a background that contrasts well with the previous section
+    // We want a luminance difference of at least 0.3 for visual distinction
+    const MIN_LUMINANCE_DIFF = 0.3;
+
+    const contrastingBg = potentialBackgrounds.find(bg => {
+      const lumDiff = Math.abs(bg.luminance - prevLuminance);
+      return lumDiff >= MIN_LUMINANCE_DIFF;
+    });
+
+    if (contrastingBg) {
+      console.log(`[Footer] Using brand background from ${contrastingBg.source}: ${contrastingBg.color} (luminance: ${contrastingBg.luminance.toFixed(3)})`);
+      return contrastingBg.color;
+    }
+
+    // Fallback: if no brand colors contrast well, use generic contrasting colors
+    console.log('[Footer] No suitable brand background found, using fallback');
+    return prevLuminance > 0.5 ? '#1a1a1a' : '#f8f8f8';
   },
 
   // Calculate contrast ratio between two colors (WCAG formula)
@@ -889,10 +1002,12 @@ const ForYouPersonalization = {
     if (catalog?.items && catalog.items.length > 0) {
       const item = catalog.items[0];
       // Handle both string items and object items
-      return {
+      const result = {
         name: typeof item === 'string' ? item : (item.name || item.title || item),
         url: typeof item === 'object' ? item.url : null
       };
+      console.log('[Footer] Using catalog item:', result.name, result.url ? `(URL: ${result.url})` : '(no URL)');
+      return result;
     }
 
     // Search inventory for product/menu/shop pages
@@ -973,10 +1088,13 @@ const ForYouPersonalization = {
       'education': 'Courses'
     };
 
-    return {
+    const fallbackResult = {
       name: fallbacks[businessProfile.vertical] || 'Learn More',
       url: null
     };
+
+    console.log('[Footer] Using fallback product:', fallbackResult.name, '(no URL)');
+    return fallbackResult;
   },
 
   // Detect section type
@@ -3673,7 +3791,7 @@ Story:`;
     // Get contrasting background color based on previous section
     const sections = Array.from(this.findAllElements(this.SELECTORS.sections));
     const lastSection = sections[sections.length - 1] || document.body.lastElementChild;
-    const footerBg = this.getContrastingBackground(lastSection);
+    const footerBg = this.getContrastingBackground(lastSection, brandStyles);
     const textColor = this.getBrandTextColor(footerBg, brandStyles);
 
     // Debug logging for color calculation
@@ -3695,6 +3813,14 @@ Story:`;
     // Generate dynamic content
     const compliment = this.generateCompliment(preferences);
     const product = this.getBestProduct(businessProfile);
+
+    // Debug: Show what product data we got
+    console.log('[Footer] Product data:', {
+      name: product.name,
+      url: product.url,
+      hasUrl: !!product.url,
+      willBeClickable: !!product.url
+    });
 
     // Create footer
     const customFooter = document.createElement('section');
@@ -3734,6 +3860,8 @@ Story:`;
 
     // Product/Service name (large) - clickable if URL available
     if (product.url) {
+      console.log(`[Footer] Creating CLICKABLE link: "${product.name}" → ${product.url}`);
+
       // Create clickable link wrapper
       const productLink = document.createElement('a');
       productLink.href = product.url;
@@ -3756,6 +3884,8 @@ Story:`;
       contentDiv.appendChild(becauseLabel);
       contentDiv.appendChild(productLink);
     } else {
+      console.log(`[Footer] Creating NON-clickable heading: "${product.name}" (no URL provided)`);
+
       // No URL - plain heading
       const productHeading = document.createElement('h2');
       productHeading.textContent = product.name;
