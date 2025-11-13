@@ -144,8 +144,7 @@ const ForYouQuiz = {
     return `
       <div class="quiz-done">
         <h2>Done</h2>
-        <p>Your experience is ready</p>
-        <button class="cta-button" id="quiz-done-button">See Your Site</button>
+        <button class="cta-button" id="quiz-done-button">See The Site</button>
       </div>
     `;
   },

@@ -3103,22 +3103,8 @@ const ForYouPersonalization = {
       }
     }
 
-    // Adapt narrative structure based on preference
-    let story = '';
-
-    if (preferences.decisionStyle === 'quick-intuitive') {
-      // Action-focused, punchy sentences
-      story = this.buildQuickStory(businessProfile, origin, uniqueValue, offering);
-    } else if (preferences.decisionStyle === 'researched-planned') {
-      // Detail-oriented, process-focused
-      story = this.buildDetailedStory(businessProfile, origin, uniqueValue, offering);
-    } else if (preferences.decisionStyle === 'guided-experts') {
-      // Trust-building, credibility-focused
-      story = this.buildTrustStory(businessProfile, origin, uniqueValue, offering);
-    } else {
-      // Default balanced story
-      story = this.buildBalancedStory(businessProfile, origin, uniqueValue, offering);
-    }
+    // Generate dynamic, authentic story using LLM
+    const story = await this.buildDynamicStory(businessProfile, origin, uniqueValue, offering, preferences);
 
     return {
       story: story,
@@ -3127,56 +3113,95 @@ const ForYouPersonalization = {
     };
   },
 
-  // Build quick-intuitive story (faster pacing, direct)
-  buildQuickStory(profile, origin, uniqueValue, offering) {
+  // Build brand story dynamically using LLM for authentic, interesting narratives
+  async buildDynamicStory(profile, origin, uniqueValue, offering, preferences) {
     const vertical = profile.vertical || 'business';
     const name = this.extractBusinessName(profile);
     const years = this.extractYearsInBusiness(profile);
 
-    const timeContext = years ? `${name} has been around for ${years}.` : `${name} got started in the ${vertical} space.`;
-    const originStory = origin ? `${origin}` : `They saw what was missing in ${vertical} and went for it.`;
-    const offeringDetail = offering ? `They're ${offering}.` : `They handle ${vertical} work.`;
+    // Compile business context for LLM
+    const context = {
+      name: name,
+      vertical: vertical,
+      years: years,
+      origin: origin,
+      uniqueValue: uniqueValue,
+      offering: offering,
+      aboutText: profile.aboutNarrative?.firstParagraphs?.join(' ').substring(0, 300) || '',
+      themes: profile.contentThemes?.dominant?.slice(0, 3).join(', ') || '',
+      valueProps: profile.valuePropsDetailed || {},
+      brandVoice: profile.brandVoice || 'professional',
+      personality: profile.brandAdjectives?.slice(0, 3).join(', ') || ''
+    };
 
-    return `${timeContext} ${originStory} ${offeringDetail} They've kept it simple - focus on ${uniqueValue} and don't overcomplicate things. Still operating that way.`;
+    // Build prompt for authentic story generation
+    const prompt = `Write a compelling, authentic brand story in first-person voice (as if the founder is speaking). Keep it 3-5 sentences maximum.
+
+Business Context:
+- Name: ${context.name}
+- Industry: ${context.vertical}
+${context.years ? `- Years in business: ${context.years}` : ''}
+${context.aboutText ? `- About: ${context.aboutText}` : ''}
+${context.offering ? `- Offerings: ${context.offering}` : ''}
+${context.themes ? `- Focus areas: ${context.themes}` : ''}
+
+Voice Style: ${context.brandVoice}, ${context.personality}
+
+Requirements:
+- Write in first-person ("I" or "we") as if the founder is speaking directly
+- Be genuine and specific - avoid generic business clichés
+- Focus on what makes this business unique and interesting
+- Keep it conversational and authentic
+- NO phrases like: "exceptional quality", "staying committed", "what people appreciate", "been that way since"
+- Make it compelling enough that someone would want to learn more
+
+Story:`;
+
+    try {
+      // Call LLM to generate story
+      const response = await fetch('http://localhost:3000/api/generate-story', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          maxTokens: 200
+        })
+      });
+
+      if (!response.ok) {
+        console.error('[For You] Story generation API failed, falling back to simple version');
+        return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+      }
+
+      const data = await response.json();
+      const story = data.story?.trim() || '';
+
+      // Validate story quality (not empty, reasonable length)
+      if (story && story.length > 50 && story.length < 800) {
+        return story;
+      } else {
+        console.warn('[For You] Generated story quality issue, using fallback');
+        return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+      }
+
+    } catch (error) {
+      console.error('[For You] Error generating dynamic story:', error);
+      return this.buildSimpleFallbackStory(profile, origin, uniqueValue, offering);
+    }
   },
 
-  // Build researched-planned story (more details, context)
-  buildDetailedStory(profile, origin, uniqueValue, offering) {
-    const vertical = profile.vertical || 'business';
+  // Simple fallback if LLM fails
+  buildSimpleFallbackStory(profile, origin, uniqueValue, offering) {
     const name = this.extractBusinessName(profile);
-    const years = this.extractYearsInBusiness(profile);
-
-    const timeContext = years ? `${name} has been operating for about ${years}.` : `${name} has been in the ${vertical} industry for a while.`;
-    const originStory = origin ? `${origin}` : `Started when someone recognized what the ${vertical} space needed.`;
-    const offeringDetail = offering ? `Today they offer ${offering.replace('offering', '')}.` : `Their ${vertical} work has evolved with that focus.`;
-
-    return `${timeContext} ${originStory} What stands out is how they built everything around ${uniqueValue}. ${offeringDetail} You can tell they've stayed committed to that approach. That's the background.`;
-  },
-
-  // Build guided-experts story (experience-focused, credibility)
-  buildTrustStory(profile, origin, uniqueValue, offering) {
     const vertical = profile.vertical || 'business';
-    const name = this.extractBusinessName(profile);
-    const years = this.extractYearsInBusiness(profile);
 
-    const experience = years ? `${name} has ${years} of experience` : `${name} has been working in ${vertical} for a while`;
-    const originStory = origin ? `${origin}` : `Started with a background in ${vertical}.`;
-    const offeringDetail = offering ? `They're ${offering}, built on that foundation.` : `They've kept their focus on ${vertical} work.`;
+    if (origin) {
+      return `${origin} ${offering ? `We're ${offering}.` : ''} That's our story.`;
+    }
 
-    return `${experience}, which shows in ${vertical}. ${originStory} Worth noting how they've centered everything on ${uniqueValue} - you can see it in how they operate. ${offeringDetail} They've built a solid reputation over time.`;
-  },
-
-  // Build balanced story (natural, conversational default)
-  buildBalancedStory(profile, origin, uniqueValue, offering) {
-    const vertical = profile.vertical || 'business';
-    const name = this.extractBusinessName(profile);
-    const years = this.extractYearsInBusiness(profile);
-
-    const timeContext = years ? `${name} has been doing this for ${years}.` : `${name} works in the ${vertical} space.`;
-    const originStory = origin ? `${origin}` : `Started in ${vertical} and stuck with it.`;
-    const offeringDetail = offering ? `They're ${offering}.` : `They handle ${vertical} work.`;
-
-    return `${timeContext} ${originStory} They've always been about ${uniqueValue}. ${offeringDetail} Turns out keeping that focus consistent is what people appreciate. Been that way since they started.`;
+    return `We're ${name}, working in ${vertical}. ${offering ? `${offering.charAt(0).toUpperCase() + offering.slice(1)}.` : ''} We focus on what matters most to our customers.`;
   },
 
   // Extract business name from profile

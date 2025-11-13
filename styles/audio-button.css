@@ -10,15 +10,16 @@
   width: 260px;
   max-width: calc(100vw - 40px);
   height: 48px;
+  box-sizing: border-box;
 
   /* Start hidden - will fade in */
   opacity: 0;
   pointer-events: none;
 
-  /* Smooth entrance animation with ease-out */
+  /* Match module animation timing exactly */
   transition:
-    opacity 600ms ease-out,
-    transform 600ms ease-out;
+    opacity 200ms cubic-bezier(0.4, 0.0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .for-you-audio-button.visible {
@@ -108,7 +109,7 @@
 .for-you-audio-label {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: #ffffff;
   letter-spacing: -0.24px;
   white-space: nowrap;
