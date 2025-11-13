@@ -781,10 +781,62 @@ const ForYouPersonalization = {
     return luminance > 0.5 ? '#1a1a1a' : '#f8f8f8';
   },
 
-  // Get contrasting text color based on background
-  getContrastingTextColor(backgroundColor) {
+  // Calculate contrast ratio between two colors (WCAG formula)
+  calculateContrastRatio(color1, color2) {
+    const lum1 = this.calculateLuminance(color1);
+    const lum2 = this.calculateLuminance(color2);
+    const lighter = Math.max(lum1, lum2);
+    const darker = Math.min(lum1, lum2);
+    return (lighter + 0.05) / (darker + 0.05);
+  },
+
+  // Get brand text color with sufficient contrast against background
+  getBrandTextColor(backgroundColor, brandStyles) {
+    // Collect brand colors from the page
+    const brandColors = [];
+
+    // Add heading colors
+    if (brandStyles.colors.headingPrimary) {
+      brandColors.push(brandStyles.colors.headingPrimary);
+    }
+    if (brandStyles.colors.text) {
+      brandColors.push(brandStyles.colors.text);
+    }
+
+    // Add button and accent colors if they exist
+    if (brandStyles.colors.button) {
+      brandColors.push(brandStyles.colors.button);
+    }
+    if (brandStyles.colors.accent) {
+      brandColors.push(brandStyles.colors.accent);
+    }
+
+    // Test each brand color for contrast ratio (WCAG AA requires 4.5:1 for body text)
+    let bestColor = null;
+    let bestContrast = 0;
+
+    for (const color of brandColors) {
+      if (!color) continue;
+      const contrast = this.calculateContrastRatio(backgroundColor, color);
+
+      // Prefer colors with best contrast
+      if (contrast > bestContrast) {
+        bestContrast = contrast;
+        bestColor = color;
+      }
+    }
+
+    // If we found a brand color with sufficient contrast (4.5:1), use it
+    if (bestColor && bestContrast >= 4.5) {
+      console.log(`[Footer] Using brand color with ${bestContrast.toFixed(2)}:1 contrast`);
+      return bestColor;
+    }
+
+    // Fallback to black or white based on background luminance
     const luminance = this.calculateLuminance(backgroundColor);
-    return luminance > 0.5 ? '#000000' : '#ffffff';
+    const fallback = luminance > 0.5 ? '#000000' : '#ffffff';
+    console.log(`[Footer] No sufficient brand color found, using fallback: ${fallback}`);
+    return fallback;
   },
 
   // Generate compliment based on quiz preferences
@@ -3525,7 +3577,7 @@ Story:`;
     const sections = Array.from(this.findAllElements(this.SELECTORS.sections));
     const lastSection = sections[sections.length - 1] || document.body.lastElementChild;
     const footerBg = this.getContrastingBackground(lastSection);
-    const textColor = this.getContrastingTextColor(footerBg);
+    const textColor = this.getBrandTextColor(footerBg, brandStyles);
 
     // Generate dynamic content
     const compliment = this.generateCompliment(preferences);
