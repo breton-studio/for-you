@@ -980,7 +980,7 @@ const ForYouPersonalization = {
       const relevance = this.calculateSectionRelevance(type, preferences);
 
       // DEBUG: Log section scoring
-      console.log(`For You: Section scored - Type: ${type}, Relevance: ${relevance}, Will hide: ${relevance < 40}`);
+      console.log(`For You: Section scored - Type: ${type}, Relevance: ${relevance}`);
 
       return {
         element: section,
@@ -1003,74 +1003,18 @@ const ForYouPersonalization = {
     scoredSections.forEach((item, newIndex) => {
       item.element.style.order = newIndex;
 
-      // Binary visibility decision: either relevant or hidden
-      // Relevant (≥40): Section is important for this visitor's narrative journey
-      // Hidden (<40): Section doesn't fit this visitor's preferences
+      // Mark highly relevant sections (optional visual indicator)
       if (item.relevance >= 70) {
         item.element.classList.add('for-you-relevant-section');
-      } else if (item.relevance < 40) {
-        // This section will be collapsed and hidden completely
-        item.element.classList.add('for-you-low-relevance-section');
       }
+      // Note: All sections remain visible - only reordered by relevance
     });
-
-    // Animate and collapse low-relevance sections
-    await this.wait(400);
-    await this.collapseAndHideLowRelevanceSections();
 
     return scoredSections;
   },
 
-  // Collapse and hide low-relevance sections
-  async collapseAndHideLowRelevanceSections() {
-    const lowRelevanceSections = document.querySelectorAll('.for-you-low-relevance-section');
-
-    for (const section of lowRelevanceSections) {
-      // Store original state
-      section.dataset.forYouOriginalDisplay = getComputedStyle(section).display;
-      section.dataset.forYouOriginalHeight = section.offsetHeight + 'px';
-      section.dataset.forYouOriginalPadding = JSON.stringify({
-        top: getComputedStyle(section).paddingTop,
-        bottom: getComputedStyle(section).paddingBottom
-      });
-      section.dataset.forYouOriginalMargin = JSON.stringify({
-        top: getComputedStyle(section).marginTop,
-        bottom: getComputedStyle(section).marginBottom
-      });
-
-      // Apply smooth collapse
-      section.style.transition = `
-        max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
-        padding 400ms cubic-bezier(0.4, 0, 0.2, 1),
-        margin 400ms cubic-bezier(0.4, 0, 0.2, 1),
-        transform 300ms cubic-bezier(0.4, 0, 0.2, 1)
-      `;
-      section.style.overflow = 'hidden';
-      section.style.maxHeight = section.offsetHeight + 'px';
-
-      // Force reflow
-      section.offsetHeight;
-
-      // Collapse
-      section.style.maxHeight = '0';
-      section.style.opacity = '0';
-      section.style.paddingTop = '0';
-      section.style.paddingBottom = '0';
-      section.style.marginTop = '0';
-      section.style.marginBottom = '0';
-      section.style.transform = 'scale(0.98)';
-
-      section.classList.add('for-you-hidden');
-    }
-
-    await this.wait(400);
-
-    // Fully hide
-    lowRelevanceSections.forEach(section => {
-      section.style.display = 'none';
-    });
-  },
+  // Note: Section hiding removed - sections are only reordered, never hidden
+  // This preserves all page content while organizing by visitor relevance
 
   // Restore all sections
   restoreAllSections() {
