@@ -975,15 +975,15 @@ const ForYouPersonalization = {
   // Generate compliment based on quiz preferences
   generateCompliment(preferences) {
     const compliments = {
-      'warm-welcoming': 'authentic connections',
-      'bold-dramatic': 'making a statement',
-      'clean-minimal': 'simplicity and clarity',
-      'quality-craft': 'attention to detail',
-      'personal-connection': 'meaningful experiences',
-      'something-new': 'trying new things',
-      'quick-intuitive': 'getting things done',
-      'researched-planned': 'thoughtful decisions',
-      'guided-experts': 'expert guidance'
+      'warm-welcoming': 'a personal touch',
+      'bold-dramatic': 'standing out',
+      'clean-minimal': 'keeping it simple',
+      'quality-craft': 'the finer things',
+      'personal-connection': 'what matters',
+      'something-new': 'exploring',
+      'quick-intuitive': 'moving fast',
+      'researched-planned': 'taking your time',
+      'guided-experts': 'trusted recommendations'
     };
 
     // Priority takes precedence over visual style
@@ -3849,9 +3849,9 @@ Story:`;
     nextUpLabel.style.opacity = '1';
     nextUpLabel.style.marginBottom = '8px';
 
-    // "Because You Like [compliment]" (70% opacity)
+    // "Because you like [compliment]" (70% opacity)
     const becauseLabel = document.createElement('div');
-    becauseLabel.textContent = `Because You Like ${compliment}`;
+    becauseLabel.textContent = `Because you like ${compliment}`;
     becauseLabel.style.fontFamily = brandStyles.typography.small.fontFamily;
     becauseLabel.style.fontSize = brandStyles.typography.small.fontSize;
     becauseLabel.style.color = textColor;
