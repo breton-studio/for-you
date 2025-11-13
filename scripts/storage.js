@@ -267,6 +267,20 @@ const ForYouStorage = {
     }
   },
 
+  // Clear cached modifications for a site + preferences combination
+  async clearModifications(siteKey, preferences) {
+    try {
+      const prefsHash = this.hashPreferences(preferences);
+      const key = `forYouMods_${siteKey}_${prefsHash}`;
+      await chrome.storage.local.remove([key]);
+      console.log(`For You: Cache cleared for ${siteKey}`);
+      return true;
+    } catch (error) {
+      console.error('For You: Error clearing cache', error);
+      return false;
+    }
+  },
+
   // Hash preferences to create a unique key
   hashPreferences(preferences) {
     // Create a simple hash from the preferences object

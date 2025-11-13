@@ -2718,6 +2718,29 @@ const ForYouPersonalization = {
     console.log('For You: Cached modifications applied');
   },
 
+  // Validate that all cached element IDs exist in current DOM
+  validateCachedModifications(cachedMods) {
+    let missingCount = 0;
+    const missingIds = [];
+
+    for (const mod of cachedMods) {
+      const element = document.querySelector(`[data-for-you-id="${mod.id}"]`);
+      if (!element) {
+        missingCount++;
+        missingIds.push(mod.id);
+      }
+    }
+
+    if (missingCount > 0) {
+      console.warn(`For You: Cache validation failed - ${missingCount}/${cachedMods.length} elements missing`);
+      console.warn('For You: Missing IDs:', missingIds.slice(0, 5)); // Log first 5 for debugging
+      return false;
+    }
+
+    console.log(`For You: Cache validation passed - all ${cachedMods.length} elements found`);
+    return true;
+  },
+
   async applyAPIModifications(modifications) {
     for (const mod of modifications) {
       // Find element by ID
@@ -2839,6 +2862,17 @@ const ForYouPersonalization = {
       // Without this step, elements won't be found and modifications will fail silently
       console.log('For You: Auditing page content for cache restoration');
       await this.auditPageContent();
+
+      // Validate cache before applying
+      const cacheValid = this.validateCachedModifications(cachedModifications);
+      if (!cacheValid) {
+        console.warn('For You: Cache validation failed - falling back to full transformation');
+        // Clear invalid cache
+        const siteKey = ForYouStorage.getSiteKey();
+        await ForYouStorage.clearModifications(siteKey, preferences);
+        // Fall back to full transformation
+        return await this.executeTransformation(preferences);
+      }
 
       // Apply cached modifications instantly (now that elements have IDs)
       await this.applyCachedModifications(cachedModifications);
