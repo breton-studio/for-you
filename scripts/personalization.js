@@ -869,7 +869,37 @@ const ForYouPersonalization = {
       return catalog.items[0];  // Return first product/service
     }
 
-    // Fallback to page name or vertical
+    // Search inventory for product/menu/shop pages
+    const inventory = businessProfile.inventory;
+    if (inventory?.pages) {
+      // Look for product, menu, shop pages by type, URL, or title
+      const productPages = inventory.pages.filter(page => {
+        const urlLower = page.url.toLowerCase();
+        const titleLower = page.title.toLowerCase();
+
+        return page.type === 'products' ||
+               page.type === 'services' ||
+               page.type === 'portfolio' ||
+               urlLower.includes('/menu') ||
+               urlLower.includes('/shop') ||
+               urlLower.includes('/store') ||
+               urlLower.includes('/products') ||
+               urlLower.includes('/food') ||
+               urlLower.includes('/drink') ||
+               titleLower.includes('menu') ||
+               titleLower.includes('shop') ||
+               titleLower.includes('store') ||
+               titleLower.includes('products');
+      });
+
+      // Return first product page title if found
+      if (productPages.length > 0 && productPages[0].title) {
+        console.log(`[Footer] Found product page: "${productPages[0].title}" (${productPages[0].url})`);
+        return productPages[0].title;
+      }
+    }
+
+    // Fallback to vertical-based generic text
     const fallbacks = {
       'restaurant': 'Our Menu',
       'spa': 'Spa Services',
@@ -3626,7 +3656,7 @@ Story:`;
     productHeading.style.fontSize = brandStyles.typography.large.fontSize;
     productHeading.style.fontWeight = brandStyles.typography.large.fontWeight;
     productHeading.style.color = textColor;
-    productHeading.style.margin = '0';
+    productHeading.style.margin = '0 0 60px 0';
 
     // Assemble
     contentDiv.appendChild(nextUpLabel);
