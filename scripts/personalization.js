@@ -660,6 +660,8 @@ const ForYouPersonalization = {
         letterSpacing: computed.letterSpacing,
         textTransform: computed.textTransform
       };
+      // Extract heading color
+      styles.colors.headingPrimary = computed.color;
     }
 
     if (h2) {
@@ -670,6 +672,10 @@ const ForYouPersonalization = {
         fontSize: computed.fontSize,
         lineHeight: computed.lineHeight
       };
+      // Use H2 color as fallback if H1 wasn't found
+      if (!styles.colors.headingPrimary) {
+        styles.colors.headingPrimary = computed.color;
+      }
     }
 
     if (p) {
@@ -680,6 +686,8 @@ const ForYouPersonalization = {
         lineHeight: computed.lineHeight,
         color: computed.color
       };
+      // Also store body text color in colors object for easier access
+      styles.colors.text = computed.color;
     }
 
     // Extract colors
@@ -804,8 +812,8 @@ const ForYouPersonalization = {
     }
 
     // Add button and accent colors if they exist
-    if (brandStyles.colors.button) {
-      brandColors.push(brandStyles.colors.button);
+    if (brandStyles.colors.primaryText) {
+      brandColors.push(brandStyles.colors.primaryText);
     }
     if (brandStyles.colors.accent) {
       brandColors.push(brandStyles.colors.accent);
@@ -832,10 +840,15 @@ const ForYouPersonalization = {
       return bestColor;
     }
 
-    // Fallback to black or white based on background luminance
-    const luminance = this.calculateLuminance(backgroundColor);
-    const fallback = luminance > 0.5 ? '#000000' : '#ffffff';
-    console.log(`[Footer] No sufficient brand color found, using fallback: ${fallback}`);
+    // Fallback to black or white - choose whichever has better contrast
+    const blackContrast = this.calculateContrastRatio(backgroundColor, '#000000');
+    const whiteContrast = this.calculateContrastRatio(backgroundColor, '#ffffff');
+
+    // Choose the color with better contrast
+    const fallback = whiteContrast > blackContrast ? '#ffffff' : '#000000';
+    const fallbackContrast = Math.max(blackContrast, whiteContrast);
+
+    console.log(`[Footer] No sufficient brand color found, using fallback: ${fallback} (${fallbackContrast.toFixed(2)}:1 contrast)`);
     return fallback;
   },
 
