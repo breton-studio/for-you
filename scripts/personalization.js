@@ -706,6 +706,18 @@ const ForYouPersonalization = {
       styles.colors.sectionBackground = getComputedStyle(firstSection).backgroundColor;
     }
 
+    // Extract footer-specific type sizes (small and large)
+    styles.typography.small = {
+      fontSize: styles.typography.body?.fontSize || '0.875rem',
+      fontFamily: styles.typography.body?.fontFamily || 'inherit'
+    };
+
+    styles.typography.large = {
+      fontSize: styles.typography.h1?.fontSize || '3rem',
+      fontWeight: styles.typography.h1?.fontWeight || '700',
+      fontFamily: styles.typography.h1?.fontFamily || 'inherit'
+    };
+
     this.brandStyles = styles;
     return styles;
   },
@@ -740,6 +752,82 @@ const ForYouPersonalization = {
         }
         break;
     }
+  },
+
+  // Calculate luminance for contrast detection
+  calculateLuminance(rgbString) {
+    // Parse rgb(r, g, b) or rgba(r, g, b, a)
+    const match = rgbString.match(/\d+/g);
+    if (!match || match.length < 3) return 0.5;
+
+    const [r, g, b] = match.slice(0, 3).map(n => {
+      const val = parseInt(n) / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  },
+
+  // Get contrasting background color for footer
+  getContrastingBackground(previousSection) {
+    if (!previousSection) {
+      return '#f8f8f8'; // Default light background
+    }
+
+    const prevBg = getComputedStyle(previousSection).backgroundColor;
+    const luminance = this.calculateLuminance(prevBg);
+
+    // If previous section is light (>0.5), use dark footer; if dark, use light footer
+    return luminance > 0.5 ? '#1a1a1a' : '#f8f8f8';
+  },
+
+  // Get contrasting text color based on background
+  getContrastingTextColor(backgroundColor) {
+    const luminance = this.calculateLuminance(backgroundColor);
+    return luminance > 0.5 ? '#000000' : '#ffffff';
+  },
+
+  // Generate compliment based on quiz preferences
+  generateCompliment(preferences) {
+    const compliments = {
+      'warm-welcoming': 'authentic connections',
+      'bold-dramatic': 'making a statement',
+      'clean-minimal': 'simplicity and clarity',
+      'quality-craft': 'attention to detail',
+      'personal-connection': 'meaningful experiences',
+      'something-new': 'trying new things',
+      'quick-intuitive': 'getting things done quickly',
+      'researched-planned': 'thoughtful decisions',
+      'guided-experts': 'trusted guidance'
+    };
+
+    // Priority takes precedence over visual style
+    const priorityPref = preferences.priority;
+    const visualPref = preferences.visualStyle;
+
+    return compliments[priorityPref] || compliments[visualPref] || 'quality';
+  },
+
+  // Get best product/service recommendation
+  getBestProduct(businessProfile) {
+    const catalog = businessProfile.catalog;
+
+    // Try catalog items first
+    if (catalog?.items && catalog.items.length > 0) {
+      return catalog.items[0];  // Return first product/service
+    }
+
+    // Fallback to page name or vertical
+    const fallbacks = {
+      'restaurant': 'Our Menu',
+      'spa': 'Spa Services',
+      'retail': 'Shop',
+      'service': 'Our Services',
+      'sports': 'Programs',
+      'education': 'Courses'
+    };
+
+    return fallbacks[businessProfile.vertical] || 'Learn More';
   },
 
   // Detect section type
@@ -3411,6 +3499,13 @@ Story:`;
   async replaceFooterWithCustom(businessProfile, preferences) {
     console.log('For You: Creating custom branded footer');
 
+    // Guard against duplicate footer injection
+    const existingCustomFooter = document.querySelector('.for-you-custom-footer');
+    if (existingCustomFooter) {
+      console.log('For You: Removing existing custom footer before creating new one');
+      existingCustomFooter.remove();
+    }
+
     // Hide existing footer
     const footerSelectors = ['footer', '.footer', '#footer', '[role="contentinfo"]', '.site-footer'];
     for (const selector of footerSelectors) {
@@ -3426,77 +3521,71 @@ Story:`;
     // Get brand styles
     const brandStyles = this.brandStyles || this.extractBrandStyles();
 
-    // Determine business main goal from profile
-    const businessGoal = this.determineBusinessGoal(businessProfile);
+    // Get contrasting background color based on previous section
+    const sections = Array.from(this.findAllElements(this.SELECTORS.sections));
+    const lastSection = sections[sections.length - 1] || document.body.lastElementChild;
+    const footerBg = this.getContrastingBackground(lastSection);
+    const textColor = this.getContrastingTextColor(footerBg);
 
-    // Generate personalized content
-    const footerContent = this.generateFooterContent(businessProfile, preferences, businessGoal);
+    // Generate dynamic content
+    const compliment = this.generateCompliment(preferences);
+    const productName = this.getBestProduct(businessProfile);
 
-    // Create custom footer section with generous whitespace
+    // Create footer
     const customFooter = document.createElement('section');
     customFooter.className = 'for-you-custom-footer';
     customFooter.dataset.forYouElement = 'true';
-    customFooter.style.cssText = `
-      padding: 120px 20px 140px 20px;
-      text-align: center;
-      background: ${brandStyles.colors.background || '#f8f8f8'};
-      border-top: 1px solid ${brandStyles.colors.border || '#e0e0e0'};
-      min-height: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    `;
 
-    // Create headline with more breathing room
-    const headline = document.createElement('h2');
-    headline.textContent = footerContent.headline;
-    headline.style.cssText = `
-      font-family: ${brandStyles.typography.h1?.fontFamily || 'inherit'};
-      font-size: ${brandStyles.typography.h2?.fontSize || '2.5rem'};
-      font-weight: ${brandStyles.typography.h2?.fontWeight || '600'};
-      color: ${brandStyles.colors.text || '#000'};
-      margin: 0 0 40px 0;
-      line-height: 1.3;
-      max-width: 700px;
-    `;
+    // Footer container styles
+    customFooter.style.background = footerBg;
+    customFooter.style.padding = '80px 20px';
+    customFooter.style.textAlign = 'center';
+    customFooter.style.minHeight = '300px';
+    customFooter.style.display = 'flex';
+    customFooter.style.alignItems = 'center';
+    customFooter.style.justifyContent = 'center';
 
-    // Create CTA button
-    const ctaButton = document.createElement('a');
-    ctaButton.textContent = footerContent.cta;
-    ctaButton.href = footerContent.ctaUrl;
-    ctaButton.style.cssText = `
-      display: inline-block;
-      padding: ${brandStyles.spacing?.buttonPadding || '16px 32px'};
-      background: ${brandStyles.colors.button || '#000'};
-      color: ${brandStyles.colors.buttonText || '#fff'};
-      font-family: ${brandStyles.typography.button?.fontFamily || 'inherit'};
-      font-size: ${brandStyles.typography.button?.fontSize || '1rem'};
-      font-weight: ${brandStyles.typography.button?.fontWeight || '500'};
-      text-decoration: none;
-      border-radius: ${brandStyles.borderRadius?.button || '4px'};
-      transition: transform 0.2s, opacity 0.2s;
-      cursor: pointer;
-    `;
+    // Content container
+    const contentDiv = document.createElement('div');
+    contentDiv.style.maxWidth = '800px';
 
-    // Add hover effect
-    ctaButton.addEventListener('mouseenter', () => {
-      ctaButton.style.transform = 'translateY(-2px)';
-      ctaButton.style.opacity = '0.9';
-    });
-    ctaButton.addEventListener('mouseleave', () => {
-      ctaButton.style.transform = 'translateY(0)';
-      ctaButton.style.opacity = '1';
-    });
+    // "Next Up" label (100% opacity)
+    const nextUpLabel = document.createElement('div');
+    nextUpLabel.textContent = 'Next Up';
+    nextUpLabel.style.fontFamily = brandStyles.typography.small.fontFamily;
+    nextUpLabel.style.fontSize = brandStyles.typography.small.fontSize;
+    nextUpLabel.style.color = textColor;
+    nextUpLabel.style.opacity = '1';
+    nextUpLabel.style.marginBottom = '8px';
 
-    // Assemble footer
-    customFooter.appendChild(headline);
-    customFooter.appendChild(ctaButton);
+    // "Because You Like [compliment]" (70% opacity)
+    const becauseLabel = document.createElement('div');
+    becauseLabel.textContent = `Because You Like ${compliment}`;
+    becauseLabel.style.fontFamily = brandStyles.typography.small.fontFamily;
+    becauseLabel.style.fontSize = brandStyles.typography.small.fontSize;
+    becauseLabel.style.color = textColor;
+    becauseLabel.style.opacity = '0.7';
+    becauseLabel.style.marginBottom = '32px';
+
+    // Product/Service name (large)
+    const productHeading = document.createElement('h2');
+    productHeading.textContent = productName;
+    productHeading.style.fontFamily = brandStyles.typography.large.fontFamily;
+    productHeading.style.fontSize = brandStyles.typography.large.fontSize;
+    productHeading.style.fontWeight = brandStyles.typography.large.fontWeight;
+    productHeading.style.color = textColor;
+    productHeading.style.margin = '0';
+
+    // Assemble
+    contentDiv.appendChild(nextUpLabel);
+    contentDiv.appendChild(becauseLabel);
+    contentDiv.appendChild(productHeading);
+    customFooter.appendChild(contentDiv);
 
     // Insert at end of body
     document.body.appendChild(customFooter);
 
-    console.log('For You: Custom footer created', footerContent);
+    console.log('For You: Custom footer created - Next Up:', productName);
   },
 
   // Determine business's main goal and find actual destination URL
