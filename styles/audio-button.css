@@ -7,7 +7,7 @@
   transform: translateX(-50%) translateY(20px);
   z-index: 99998; /* Below For You toggle */
 
-  width: 260px;
+  width: 302px;
   max-width: calc(100vw - 40px);
   height: 48px;
   box-sizing: border-box;

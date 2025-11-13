@@ -143,7 +143,6 @@ const ForYouQuiz = {
   renderDoneScreen() {
     return `
       <div class="quiz-done">
-        <h2>Done</h2>
         <button class="cta-button" id="quiz-done-button">See The Site</button>
       </div>
     `;
