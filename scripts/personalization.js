@@ -943,9 +943,24 @@ const ForYouPersonalization = {
     let bestColor = null;
     let bestContrast = 0;
 
+    // Check background luminance to determine if it's dark or light
+    const bgLuminance = this.calculateLuminance(backgroundColor);
+    const isDarkBackground = bgLuminance < 0.5;
+
     for (const color of brandColors) {
       if (!color) continue;
       const contrast = this.calculateContrastRatio(backgroundColor, color);
+      const colorLuminance = this.calculateLuminance(color);
+
+      // Skip dark colors on dark backgrounds, and light colors on light backgrounds
+      if (isDarkBackground && colorLuminance < 0.5) {
+        console.log(`[Footer] Skipping dark brand color on dark background (luminance: ${colorLuminance.toFixed(3)})`);
+        continue;
+      }
+      if (!isDarkBackground && colorLuminance > 0.5) {
+        console.log(`[Footer] Skipping light brand color on light background (luminance: ${colorLuminance.toFixed(3)})`);
+        continue;
+      }
 
       // Prefer colors with best contrast
       if (contrast > bestContrast) {
@@ -960,8 +975,7 @@ const ForYouPersonalization = {
       return bestColor;
     }
 
-    // Fallback to black or white based on background luminance
-    const bgLuminance = this.calculateLuminance(backgroundColor);
+    // Fallback to black or white based on background luminance (already calculated above)
     const blackContrast = this.calculateContrastRatio(backgroundColor, '#000000');
     const whiteContrast = this.calculateContrastRatio(backgroundColor, '#ffffff');
 
@@ -1073,9 +1087,30 @@ const ForYouPersonalization = {
 
       // Return first product page with title and URL
       if (productPages.length > 0 && productPages[0].title) {
+        const page = productPages[0];
+        let name = page.title;
+
+        // If title is generic/unhelpful, use first H1 heading instead
+        const genericTitles = ['stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch'];
+        const titleLower = name.toLowerCase();
+        const isGeneric = genericTitles.some(generic => titleLower.includes(generic));
+
+        if (isGeneric && page.headings && page.headings.length > 0) {
+          // Try to find an H1 heading
+          const h1 = page.headings.find(h => h.level === 'h1');
+          if (h1 && h1.text && h1.text.trim()) {
+            name = h1.text.trim();
+            console.log(`[Footer] Using H1 "${name}" instead of generic title "${page.title}"`);
+          } else if (page.headings[0] && page.headings[0].text && page.headings[0].text.trim()) {
+            // Fallback to first heading of any level
+            name = page.headings[0].text.trim();
+            console.log(`[Footer] Using first heading "${name}" instead of generic title "${page.title}"`);
+          }
+        }
+
         return {
-          name: productPages[0].title,
-          url: productPages[0].url
+          name: name,
+          url: page.url
         };
       }
     }
