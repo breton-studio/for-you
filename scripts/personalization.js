@@ -2424,7 +2424,13 @@ const ForYouPersonalization = {
     this.disableSquarespaceAnimations();
 
     try {
-      // Apply cached modifications instantly
+      // CRITICAL: Audit page content to assign data-for-you-id attributes to all elements
+      // This is necessary because cached modifications reference elements by ID
+      // Without this step, elements won't be found and modifications will fail silently
+      console.log('For You: Auditing page content for cache restoration');
+      await this.auditPageContent();
+
+      // Apply cached modifications instantly (now that elements have IDs)
       await this.applyCachedModifications(cachedModifications);
 
       // Still need to do section reordering and footer replacement
@@ -2522,6 +2528,21 @@ const ForYouPersonalization = {
       // 4.5. Cache the modifications for quick restore on next toggle
       await ForYouStorage.saveModifications(siteKey, preferences, modifications);
       console.log('For You: Modifications cached for instant restore');
+
+      // 4.6. Generate and log brand story (only on first transformation, not from cache)
+      if (businessProfile.aboutNarrative || businessProfile.teamInfo || businessProfile.contentThemes) {
+        const brandStory = await this.generateBrandStory(businessProfile, preferences);
+        console.log('');
+        console.log('═══════════════════════════════════════');
+        console.log('FOR YOU: BRAND STORY');
+        console.log('═══════════════════════════════════════');
+        console.log(brandStory.story);
+        console.log('');
+        console.log('Brand Personality:', brandStory.personality);
+        console.log('Voice Gender:', brandStory.voiceGender);
+        console.log('═══════════════════════════════════════');
+        console.log('');
+      }
 
       // 5. Reorder and collapse sections (starts at 700ms)
       setTimeout(async () => {
@@ -2960,6 +2981,206 @@ const ForYouPersonalization = {
     // Limit to 800 chars total
     const combined = texts.join(' ').substring(0, 800);
     return combined || inventory.allParagraphs.slice(0, 3).join(' ').substring(0, 800);
+  },
+
+  // Detect voice gender from brand language and content
+  detectVoiceGender(businessProfile) {
+    let feminineScore = 0;
+    let masculineScore = 0;
+
+    // Feminine indicators
+    const feminineKeywords = ['nurture', 'care', 'community', 'together', 'warm', 'welcoming', 'thoughtful', 'gentle', 'inclusive', 'personal', 'connection', 'heart', 'love', 'compassion'];
+    // Masculine indicators
+    const masculineKeywords = ['strong', 'power', 'achieve', 'win', 'bold', 'drive', 'build', 'conquer', 'master', 'expert', 'professional', 'precision', 'performance'];
+
+    const textToAnalyze = `${businessProfile.sampleTextMultiPage || businessProfile.sampleText} ${businessProfile.brandAdjectives.join(' ')} ${businessProfile.brandVoice}`.toLowerCase();
+
+    feminineKeywords.forEach(word => {
+      if (textToAnalyze.includes(word)) feminineScore++;
+    });
+
+    masculineKeywords.forEach(word => {
+      if (textToAnalyze.includes(word)) masculineScore++;
+    });
+
+    // Check formality and value props for additional signals
+    if (businessProfile.formality === 'casual' || businessProfile.formality === 'friendly') {
+      feminineScore += 1;
+    }
+    if (businessProfile.formality === 'professional' || businessProfile.formality === 'formal') {
+      masculineScore += 1;
+    }
+
+    // Check value props for personal connection emphasis
+    const valueProps = businessProfile.valuePropsDetailed || businessProfile.valueProps?.emphasis;
+    if (valueProps && valueProps.personal > 50) {
+      feminineScore += 2;
+    }
+
+    // Determine gender
+    const diff = Math.abs(feminineScore - masculineScore);
+    if (diff < 2) {
+      return 'neutral'; // Too close to call or balanced
+    }
+    return feminineScore > masculineScore ? 'feminine' : 'masculine';
+  },
+
+  // Generate 6-sentence brand story
+  async generateBrandStory(businessProfile, preferences) {
+    console.log('[For You] Generating brand story...');
+
+    // Detect voice personality and gender
+    const personality = businessProfile.brandAdjectives && businessProfile.brandAdjectives.length > 0
+      ? businessProfile.brandAdjectives.slice(0, 4).join(', ')
+      : `${businessProfile.brandVoice}, ${businessProfile.formality}`;
+
+    const voiceGender = this.detectVoiceGender(businessProfile);
+
+    // Extract story elements
+    let origin = '';
+    let uniqueValue = '';
+    let offering = '';
+
+    // Priority 1: Use aboutNarrative if available
+    if (businessProfile.aboutNarrative && businessProfile.aboutNarrative.firstParagraphs) {
+      const aboutText = businessProfile.aboutNarrative.firstParagraphs.join(' ');
+      origin = aboutText.substring(0, 200);
+    }
+
+    // Priority 2: Use team info
+    if (!origin && businessProfile.teamInfo && businessProfile.teamInfo.teamDescriptions) {
+      origin = businessProfile.teamInfo.teamDescriptions.slice(0, 2).join(' ').substring(0, 200);
+    }
+
+    // Priority 3: Use content themes and value props
+    if (!origin && businessProfile.contentThemes) {
+      origin = `Focused on ${businessProfile.contentThemes.dominant.slice(0, 2).join(' and ')}.`;
+    }
+
+    // Extract offering from catalog
+    if (businessProfile.catalog && businessProfile.catalog.items.length > 0) {
+      const items = businessProfile.catalog.items.slice(0, 3).join(', ');
+      offering = `offering ${businessProfile.catalog.type === 'products' ? 'products' : 'services'} like ${items}`;
+    }
+
+    // Build unique value from value props
+    const valueProps = businessProfile.valuePropsDetailed || businessProfile.valueProps?.emphasis;
+    if (valueProps) {
+      if (valueProps.quality > 60) {
+        uniqueValue = 'exceptional quality and craftsmanship';
+      } else if (valueProps.personal > 60) {
+        uniqueValue = 'personal attention and meaningful connections';
+      } else if (valueProps.expertise > 60) {
+        uniqueValue = 'deep expertise and proven experience';
+      } else {
+        uniqueValue = 'a balanced approach to excellence';
+      }
+    }
+
+    // Adapt narrative structure based on preference
+    let story = '';
+
+    if (preferences.decisionStyle === 'quick-intuitive') {
+      // Action-focused, punchy sentences
+      story = this.buildQuickStory(businessProfile, origin, uniqueValue, offering);
+    } else if (preferences.decisionStyle === 'researched-planned') {
+      // Detail-oriented, process-focused
+      story = this.buildDetailedStory(businessProfile, origin, uniqueValue, offering);
+    } else if (preferences.decisionStyle === 'guided-experts') {
+      // Trust-building, credibility-focused
+      story = this.buildTrustStory(businessProfile, origin, uniqueValue, offering);
+    } else {
+      // Default balanced story
+      story = this.buildBalancedStory(businessProfile, origin, uniqueValue, offering);
+    }
+
+    return {
+      story: story,
+      personality: personality,
+      voiceGender: voiceGender
+    };
+  },
+
+  // Build quick-intuitive story (faster pacing, direct)
+  buildQuickStory(profile, origin, uniqueValue, offering) {
+    const vertical = profile.vertical || 'business';
+    const name = this.extractBusinessName(profile);
+    const years = this.extractYearsInBusiness(profile);
+
+    const timeContext = years ? `${name} has been around for ${years}.` : `${name} got started in the ${vertical} space.`;
+    const originStory = origin ? `${origin}` : `They saw what was missing in ${vertical} and went for it.`;
+    const offeringDetail = offering ? `They're ${offering}.` : `They handle ${vertical} work.`;
+
+    return `${timeContext} ${originStory} ${offeringDetail} They've kept it simple - focus on ${uniqueValue} and don't overcomplicate things. Still operating that way.`;
+  },
+
+  // Build researched-planned story (more details, context)
+  buildDetailedStory(profile, origin, uniqueValue, offering) {
+    const vertical = profile.vertical || 'business';
+    const name = this.extractBusinessName(profile);
+    const years = this.extractYearsInBusiness(profile);
+
+    const timeContext = years ? `${name} has been operating for about ${years}.` : `${name} has been in the ${vertical} industry for a while.`;
+    const originStory = origin ? `${origin}` : `Started when someone recognized what the ${vertical} space needed.`;
+    const offeringDetail = offering ? `Today they offer ${offering.replace('offering', '')}.` : `Their ${vertical} work has evolved with that focus.`;
+
+    return `${timeContext} ${originStory} What stands out is how they built everything around ${uniqueValue}. ${offeringDetail} You can tell they've stayed committed to that approach. That's the background.`;
+  },
+
+  // Build guided-experts story (experience-focused, credibility)
+  buildTrustStory(profile, origin, uniqueValue, offering) {
+    const vertical = profile.vertical || 'business';
+    const name = this.extractBusinessName(profile);
+    const years = this.extractYearsInBusiness(profile);
+
+    const experience = years ? `${name} has ${years} of experience` : `${name} has been working in ${vertical} for a while`;
+    const originStory = origin ? `${origin}` : `Started with a background in ${vertical}.`;
+    const offeringDetail = offering ? `They're ${offering}, built on that foundation.` : `They've kept their focus on ${vertical} work.`;
+
+    return `${experience}, which shows in ${vertical}. ${originStory} Worth noting how they've centered everything on ${uniqueValue} - you can see it in how they operate. ${offeringDetail} They've built a solid reputation over time.`;
+  },
+
+  // Build balanced story (natural, conversational default)
+  buildBalancedStory(profile, origin, uniqueValue, offering) {
+    const vertical = profile.vertical || 'business';
+    const name = this.extractBusinessName(profile);
+    const years = this.extractYearsInBusiness(profile);
+
+    const timeContext = years ? `${name} has been doing this for ${years}.` : `${name} works in the ${vertical} space.`;
+    const originStory = origin ? `${origin}` : `Started in ${vertical} and stuck with it.`;
+    const offeringDetail = offering ? `They're ${offering}.` : `They handle ${vertical} work.`;
+
+    return `${timeContext} ${originStory} They've always been about ${uniqueValue}. ${offeringDetail} Turns out keeping that focus consistent is what people appreciate. Been that way since they started.`;
+  },
+
+  // Extract business name from profile
+  extractBusinessName(profile) {
+    // Try to get from URL or use generic
+    try {
+      const hostname = window.location.hostname.replace('www.', '');
+      const name = hostname.split('.')[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    } catch {
+      return 'This business';
+    }
+  },
+
+  // Extract years in business from content
+  extractYearsInBusiness(profile) {
+    if (!profile.aboutNarrative || !profile.aboutNarrative.firstParagraphs) {
+      return null;
+    }
+
+    const text = profile.aboutNarrative.firstParagraphs.join(' ');
+    // Look for year mentions like "since 2010", "established 2015", etc.
+    const yearMatch = text.match(/since (\d{4})|established (\d{4})|founded (\d{4})/i);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1] || yearMatch[2] || yearMatch[3]);
+      const currentYear = new Date().getFullYear();
+      const years = currentYear - year;
+      return years > 0 ? `${years}+ years` : null;
+    }
+    return null;
   },
 
   // Remove all personalization
