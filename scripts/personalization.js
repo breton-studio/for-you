@@ -57,6 +57,16 @@ const ForYouPersonalization = {
     GENERAL: 'general'
   },
 
+  // Generic titles to filter out from product detection
+  GENERIC_TITLES: [
+    // Newsletter/signup related
+    'stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch',
+    // Common single-word section headers
+    'info', 'details', 'about', 'description', 'overview', 'features', 'reviews', 'faq', 'policy',
+    // Marketing phrase patterns (partial matches)
+    'give the gift', 'perfect for', 'great for', 'ideal for'
+  ],
+
   // Check if site is Squarespace
   checkIsSquarespace() {
     const indicators = [
@@ -1014,15 +1024,12 @@ const ForYouPersonalization = {
   getBestProduct(businessProfile) {
     const catalog = businessProfile.catalog;
 
-    // Try catalog items first, but filter out generic titles
+    // Try catalog items first - they're already filtered and sorted by quality score in extractCatalog()
     if (catalog?.items && catalog.items.length > 0) {
-      const genericTitles = ['stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch'];
-
-      // Find first non-generic catalog item
+      // Find first valid, non-generic catalog item (should already be highest quality)
       const validItem = catalog.items.find(item => {
         const name = typeof item === 'string' ? item : (item.name || item.title || item);
-        const nameLower = name.toLowerCase();
-        return !genericTitles.some(generic => nameLower.includes(generic));
+        return !this.isGenericTitle(name);
       });
 
       if (validItem) {
@@ -1102,11 +1109,7 @@ const ForYouPersonalization = {
         let name = page.title;
 
         // If title is generic/unhelpful, use first H1 heading instead
-        const genericTitles = ['stay updated', 'newsletter', 'subscribe', 'sign up', 'contact', 'get in touch'];
-        const titleLower = name.toLowerCase();
-        const isGeneric = genericTitles.some(generic => titleLower.includes(generic));
-
-        if (isGeneric && page.headings && page.headings.length > 0) {
+        if (this.isGenericTitle(name) && page.headings && page.headings.length > 0) {
           // Try to find an H1 heading
           const h1 = page.headings.find(h => h.level === 'h1');
           if (h1 && h1.text && h1.text.trim()) {
@@ -3169,6 +3172,53 @@ const ForYouPersonalization = {
     return teamInfo;
   },
 
+  // Check if a title is generic and should be filtered out
+  isGenericTitle(title) {
+    if (!title || typeof title !== 'string') return true;
+
+    const titleLower = title.toLowerCase().trim();
+
+    // Empty or too short
+    if (titleLower.length < 2) return true;
+
+    // Check against generic title list
+    return this.GENERIC_TITLES.some(generic => titleLower.includes(generic));
+  },
+
+  // Calculate quality score for a heading as a product/service name
+  calculateHeadingQuality(heading, page) {
+    let score = 0;
+    const headingText = heading.text || '';
+    const wordCount = headingText.split(/\s+/).length;
+
+    // Word count heuristic (2-5 words is ideal for product names)
+    if (wordCount >= 2 && wordCount <= 5) {
+      score += 5;
+    } else if (wordCount === 1 && !this.isGenericTitle(headingText)) {
+      // Single word is okay if not generic (e.g., "Brisket", "Plants")
+      score += 3;
+    }
+
+    // Not generic title
+    if (!this.isGenericTitle(headingText)) {
+      score += 5;
+    } else {
+      // Generic titles get negative score
+      score -= 10;
+    }
+
+    // Check for price indicators nearby (strong signal it's a product)
+    // This would require DOM access, so we'll skip for now
+    // In a real implementation, we'd check if heading.element has nearby $ or price elements
+
+    // Length check - very long headings are likely descriptions, not names
+    if (headingText.length > 100) {
+      score -= 5;
+    }
+
+    return score;
+  },
+
   // Extract services or products catalog
   async extractCatalog(inventory) {
     const catalogPages = [
@@ -3187,12 +3237,22 @@ const ForYouPersonalization = {
 
     for (const page of catalogPages) {
       // Extract service/product names from H2/H3 headings with URLs
+      // Use quality scoring to filter out generic/marketing headings
       for (const h of page.headings) {
         if (h.level === 'h2' || h.level === 'h3') {
-          catalog.items.push({
-            name: h.text,
-            url: page.url
-          });
+          const qualityScore = this.calculateHeadingQuality(h, page);
+
+          // Only include headings with positive quality score
+          if (qualityScore > 0) {
+            catalog.items.push({
+              name: h.text,
+              url: page.url,
+              qualityScore: qualityScore
+            });
+            console.log(`[Catalog] Added "${h.text}" (score: ${qualityScore})`);
+          } else {
+            console.log(`[Catalog] Filtered out "${h.text}" (score: ${qualityScore})`);
+          }
         }
       }
 
@@ -3203,7 +3263,9 @@ const ForYouPersonalization = {
       await this.yieldToEventLoop();
     }
 
-    // Limit to reasonable size and dedupe by name
+    // Sort by quality score (highest first), then dedupe and limit
+    catalog.items.sort((a, b) => b.qualityScore - a.qualityScore);
+
     const seenNames = new Set();
     catalog.items = catalog.items
       .filter(item => {
@@ -3213,6 +3275,8 @@ const ForYouPersonalization = {
       })
       .slice(0, 10);
     catalog.descriptions = catalog.descriptions.slice(0, 8);
+
+    console.log(`[Catalog] Final items (${catalog.items.length}):`, catalog.items.map(i => `${i.name} (${i.qualityScore})`));
 
     return catalog;
   },
