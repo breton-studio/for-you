@@ -861,9 +861,9 @@ const ForYouPersonalization = {
       'quality-craft': 'attention to detail',
       'personal-connection': 'meaningful experiences',
       'something-new': 'trying new things',
-      'quick-intuitive': 'getting things done quickly',
+      'quick-intuitive': 'getting things done',
       'researched-planned': 'thoughtful decisions',
-      'guided-experts': 'trusted guidance'
+      'guided-experts': 'expert guidance'
     };
 
     // Priority takes precedence over visual style
@@ -874,12 +874,18 @@ const ForYouPersonalization = {
   },
 
   // Get best product/service recommendation
+  // Returns: { name: string, url: string|null }
   getBestProduct(businessProfile) {
     const catalog = businessProfile.catalog;
 
     // Try catalog items first
     if (catalog?.items && catalog.items.length > 0) {
-      return catalog.items[0];  // Return first product/service
+      const item = catalog.items[0];
+      // Handle both string items and object items
+      return {
+        name: typeof item === 'string' ? item : (item.name || item.title || item),
+        url: typeof item === 'object' ? item.url : null
+      };
     }
 
     // Search inventory for product/menu/shop pages
@@ -905,14 +911,17 @@ const ForYouPersonalization = {
                titleLower.includes('products');
       });
 
-      // Return first product page title if found
+      // Return first product page with title and URL
       if (productPages.length > 0 && productPages[0].title) {
         console.log(`[Footer] Found product page: "${productPages[0].title}" (${productPages[0].url})`);
-        return productPages[0].title;
+        return {
+          name: productPages[0].title,
+          url: productPages[0].url
+        };
       }
     }
 
-    // Fallback to vertical-based generic text
+    // Fallback to vertical-based generic text (no URL)
     const fallbacks = {
       'restaurant': 'Our Menu',
       'spa': 'Spa Services',
@@ -922,7 +931,10 @@ const ForYouPersonalization = {
       'education': 'Courses'
     };
 
-    return fallbacks[businessProfile.vertical] || 'Learn More';
+    return {
+      name: fallbacks[businessProfile.vertical] || 'Learn More',
+      url: null
+    };
   },
 
   // Detect section type
@@ -3624,7 +3636,7 @@ Story:`;
 
     // Generate dynamic content
     const compliment = this.generateCompliment(preferences);
-    const productName = this.getBestProduct(businessProfile);
+    const product = this.getBestProduct(businessProfile);
 
     // Create footer
     const customFooter = document.createElement('section');
@@ -3662,25 +3674,51 @@ Story:`;
     becauseLabel.style.opacity = '0.7';
     becauseLabel.style.marginBottom = '32px';
 
-    // Product/Service name (large)
-    const productHeading = document.createElement('h2');
-    productHeading.textContent = productName;
-    productHeading.style.fontFamily = brandStyles.typography.large.fontFamily;
-    productHeading.style.fontSize = brandStyles.typography.large.fontSize;
-    productHeading.style.fontWeight = brandStyles.typography.large.fontWeight;
-    productHeading.style.color = textColor;
-    productHeading.style.margin = '0 0 60px 0';
+    // Product/Service name (large) - clickable if URL available
+    if (product.url) {
+      // Create clickable link wrapper
+      const productLink = document.createElement('a');
+      productLink.href = product.url;
+      productLink.style.textDecoration = 'none';
+      productLink.style.color = 'inherit';
+      productLink.style.cursor = 'pointer';
 
-    // Assemble
-    contentDiv.appendChild(nextUpLabel);
-    contentDiv.appendChild(becauseLabel);
-    contentDiv.appendChild(productHeading);
+      const productHeading = document.createElement('h2');
+      productHeading.textContent = product.name;
+      productHeading.style.fontFamily = brandStyles.typography.large.fontFamily;
+      productHeading.style.fontSize = brandStyles.typography.large.fontSize;
+      productHeading.style.fontWeight = brandStyles.typography.large.fontWeight;
+      productHeading.style.color = textColor;
+      productHeading.style.margin = '0 0 60px 0';
+
+      productLink.appendChild(productHeading);
+
+      // Assemble with link
+      contentDiv.appendChild(nextUpLabel);
+      contentDiv.appendChild(becauseLabel);
+      contentDiv.appendChild(productLink);
+    } else {
+      // No URL - plain heading
+      const productHeading = document.createElement('h2');
+      productHeading.textContent = product.name;
+      productHeading.style.fontFamily = brandStyles.typography.large.fontFamily;
+      productHeading.style.fontSize = brandStyles.typography.large.fontSize;
+      productHeading.style.fontWeight = brandStyles.typography.large.fontWeight;
+      productHeading.style.color = textColor;
+      productHeading.style.margin = '0 0 60px 0';
+
+      // Assemble without link
+      contentDiv.appendChild(nextUpLabel);
+      contentDiv.appendChild(becauseLabel);
+      contentDiv.appendChild(productHeading);
+    }
+
     customFooter.appendChild(contentDiv);
 
     // Insert at end of body
     document.body.appendChild(customFooter);
 
-    console.log('For You: Custom footer created - Next Up:', productName);
+    console.log('For You: Custom footer created - Next Up:', product.name, product.url ? `(${product.url})` : '(no link)');
   },
 
   // Determine business's main goal and find actual destination URL
