@@ -143,6 +143,8 @@ const ForYouQuiz = {
   renderDoneScreen() {
     return `
       <div class="quiz-done">
+        <h2>Perfect</h2>
+        <p>This site will tune up to give you a warm welcome. Other sites with the "For You" switch will also be personalized, if you activate it.</p>
         <button class="cta-button" id="quiz-done-button">See The Site</button>
       </div>
     `;
