@@ -645,10 +645,10 @@ const ForYouPersonalization = {
       borderRadius: {}
     };
 
-    // Extract typography
-    const h1 = document.querySelector('h1');
-    const h2 = document.querySelector('h2');
-    const p = document.querySelector('p');
+    // Extract typography - expanded selectors to find headings on more sites
+    const h1 = document.querySelector('h1, [class*="heading"]:not([class*="subheading"]), .site-title, .page-title, [class*="title"]:not(title):not([class*="subtitle"])');
+    const h2 = document.querySelector('h2, .subtitle, [class*="subheading"], [class*="sub-title"]');
+    const p = document.querySelector('p, .body-text, [class*="paragraph"], [class*="description"]:not(meta)');
 
     if (h1) {
       const computed = getComputedStyle(h1);
@@ -764,9 +764,16 @@ const ForYouPersonalization = {
 
   // Calculate luminance for contrast detection
   calculateLuminance(rgbString) {
+    // Handle transparent or invalid colors - assume light background (most common on web)
+    if (!rgbString || rgbString === 'transparent' || rgbString.includes('rgba(0, 0, 0, 0)')) {
+      return 0.9; // Light background default
+    }
+
     // Parse rgb(r, g, b) or rgba(r, g, b, a)
     const match = rgbString.match(/\d+/g);
-    if (!match || match.length < 3) return 0.5;
+    if (!match || match.length < 3) {
+      return 0.9; // Safe default for parsing failures
+    }
 
     const [r, g, b] = match.slice(0, 3).map(n => {
       const val = parseInt(n) / 255;
@@ -891,11 +898,32 @@ const ForYouPersonalization = {
     // Search inventory for product/menu/shop pages
     const inventory = businessProfile.inventory;
     if (inventory?.pages) {
+      // Debug: Log all pages
+      console.group('[Footer Debug] Product Page Selection');
+      console.log('Total pages in inventory:', inventory.pages?.length);
+
       // Look for product, menu, shop pages by type, URL, or title
       const productPages = inventory.pages.filter(page => {
         const urlLower = page.url.toLowerCase();
         const titleLower = page.title.toLowerCase();
 
+        // EXCLUDE newsletter/signup/contact pages first
+        const isExcluded =
+          titleLower.includes('newsletter') ||
+          titleLower.includes('signup') ||
+          titleLower.includes('sign up') ||
+          titleLower.includes('subscribe') ||
+          titleLower.includes('stay updated') ||
+          titleLower.includes('contact') ||
+          titleLower.includes('about us') ||
+          urlLower.includes('/newsletter') ||
+          urlLower.includes('/signup') ||
+          urlLower.includes('/subscribe') ||
+          urlLower.includes('/contact');
+
+        if (isExcluded) return false;
+
+        // INCLUDE product/menu pages
         return page.type === 'products' ||
                page.type === 'services' ||
                page.type === 'portfolio' ||
@@ -905,15 +933,29 @@ const ForYouPersonalization = {
                urlLower.includes('/products') ||
                urlLower.includes('/food') ||
                urlLower.includes('/drink') ||
+               urlLower.includes('/bbq') ||
+               urlLower.includes('/catering') ||
+               urlLower.includes('/order') ||
+               urlLower.includes('/delivery') ||
                titleLower.includes('menu') ||
                titleLower.includes('shop') ||
                titleLower.includes('store') ||
-               titleLower.includes('products');
+               titleLower.includes('products') ||
+               titleLower.includes('bbq') ||
+               titleLower.includes('catering') ||
+               titleLower.includes('order') ||
+               titleLower.includes('our food') ||
+               titleLower.includes('our menu');
       });
+
+      console.log('Product pages found:', productPages.length);
+      if (productPages.length > 0) {
+        console.log('Selected page:', productPages[0].title, productPages[0].url);
+      }
+      console.groupEnd();
 
       // Return first product page with title and URL
       if (productPages.length > 0 && productPages[0].title) {
-        console.log(`[Footer] Found product page: "${productPages[0].title}" (${productPages[0].url})`);
         return {
           name: productPages[0].title,
           url: productPages[0].url
@@ -3633,6 +3675,22 @@ Story:`;
     const lastSection = sections[sections.length - 1] || document.body.lastElementChild;
     const footerBg = this.getContrastingBackground(lastSection);
     const textColor = this.getBrandTextColor(footerBg, brandStyles);
+
+    // Debug logging for color calculation
+    console.group('[Footer Debug] Color Calculation');
+    console.log('Last section element:', lastSection?.tagName, lastSection?.className?.substring(0, 50));
+    console.log('Last section bg color:', getComputedStyle(lastSection).backgroundColor);
+    console.log('Calculated luminance:', this.calculateLuminance(getComputedStyle(lastSection).backgroundColor).toFixed(3));
+    console.log('Footer bg chosen:', footerBg);
+    console.log('Brand colors extracted:', {
+      headingPrimary: brandStyles.colors.headingPrimary,
+      text: brandStyles.colors.text,
+      primaryText: brandStyles.colors.primaryText,
+      accent: brandStyles.colors.accent
+    });
+    console.log('Text color chosen:', textColor);
+    console.log('Contrast ratio:', this.calculateContrastRatio(footerBg, textColor).toFixed(2) + ':1');
+    console.groupEnd();
 
     // Generate dynamic content
     const compliment = this.generateCompliment(preferences);
