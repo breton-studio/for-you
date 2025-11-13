@@ -7,6 +7,7 @@
 
   // State management
   let forYouModule = null;
+  let forYouAudioButton = null;
   let lastScrollTop = 0;
   const scrollThreshold = 100;
   let isInitialized = false;
@@ -529,6 +530,9 @@
         toggle.setAttribute('aria-checked', 'false');
         await ForYouStorage.saveToggleState(false);
 
+        // Hide audio button
+        hideAudioButton();
+
         // Remove all personalization
         await ForYouPersonalization.removePersonalization();
 
@@ -562,6 +566,9 @@
           toggle.classList.add('on');
 
           console.log('For You: Personalization enabled');
+
+          // Show audio button if audio data is available
+          showAudioButtonIfAvailable();
         } else {
           // User needs to take quiz
           toggle.classList.add('on');
@@ -599,18 +606,125 @@
   function handleScroll() {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const module = document.getElementById('for-you-module');
+    const audioButton = document.querySelector('.for-you-audio-button');
 
     if (!module) return;
 
     if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
-      // Scrolling down - hide module
+      // Scrolling down - hide module and audio button
       module.classList.add('hidden');
+      if (audioButton) {
+        audioButton.classList.add('hidden');
+      }
     } else if (scrollTop < lastScrollTop) {
-      // Scrolling up - show module
+      // Scrolling up - show module and audio button
       module.classList.remove('hidden');
+      if (audioButton) {
+        audioButton.classList.remove('hidden');
+      }
     }
 
     lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+  }
+
+  // Show audio button if audio data is available
+  async function showAudioButtonIfAvailable() {
+    console.log('[For You] Audio: Checking for audio data...');
+    console.log('[For You] Audio: window.forYouAudioData exists:', !!window.forYouAudioData);
+
+    // Check if audio data exists globally (set by personalization.js)
+    if (!window.forYouAudioData || !window.forYouAudioData.audioDataUrl) {
+      if (window.forYouAudioData) {
+        console.log('[For You] Audio: Has audioDataUrl:', !!window.forYouAudioData.audioDataUrl);
+      }
+      console.log('[For You] Audio: No audio data available - button will not show');
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('audio', 'Audio: No data');
+      }
+      return;
+    }
+
+    console.log('[For You] Audio: Data available - creating button');
+    console.log('[For You] Audio: Brand name:', window.forYouAudioData.brandName);
+    console.log('[For You] Audio: audioDataUrl length:', window.forYouAudioData.audioDataUrl.length);
+
+    // Create audio button if it doesn't exist
+    if (!forYouAudioButton) {
+      console.log('[For You] Audio: Creating new audio button instance');
+      forYouAudioButton = new ForYouAudioButton();
+      forYouAudioButton.create(window.forYouAudioData.brandName || 'this brand');
+      console.log('[For You] Audio: Button created');
+
+      // Apply brand color to audio button
+      applyBrandColorToAudioButton();
+    } else {
+      console.log('[For You] Audio: Using existing button instance');
+    }
+
+    // Load audio into button
+    console.log('[For You] Audio: Loading audio data into button...');
+    await forYouAudioButton.loadAudio(window.forYouAudioData.audioDataUrl);
+    console.log('[For You] Audio: Audio loaded successfully');
+
+    // Show button with animation
+    console.log('[For You] Audio: Showing button');
+    forYouAudioButton.show();
+    console.log('[For You] Audio: Button visible');
+
+    if (window.ForYouDebugOverlay) {
+      window.ForYouDebugOverlay.update('audio', 'Audio: Button shown');
+    }
+  }
+
+  // Make function globally accessible so personalization.js can trigger it
+  window.showAudioButtonIfAvailable = showAudioButtonIfAvailable;
+
+  // Hide audio button
+  function hideAudioButton() {
+    if (forYouAudioButton) {
+      forYouAudioButton.hide();
+    }
+  }
+
+  // Apply brand color to audio button (match module styling)
+  function applyBrandColorToAudioButton() {
+    try {
+      const brandColor = extractBrandAccentColor();
+
+      if (brandColor) {
+        const audioButton = document.querySelector('.for-you-audio-btn');
+        if (audioButton) {
+          // Parse RGB from brand color (same as module)
+          const rgb = parseColorToRGB(brandColor);
+          if (rgb) {
+            // Darken brand color by 50% for better contrast (match module)
+            const darkR = Math.round(rgb.r * 0.5);
+            const darkG = Math.round(rgb.g * 0.5);
+            const darkB = Math.round(rgb.b * 0.5);
+
+            // Apply same background as module: black overlay + brand tint
+            audioButton.style.background = `
+              linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+              rgba(${darkR}, ${darkG}, ${darkB}, 0.7)
+            `;
+
+            // Create darker version for progress bar
+            const progressDarkR = Math.round(darkR * 0.8);
+            const progressDarkG = Math.round(darkG * 0.8);
+            const progressDarkB = Math.round(darkB * 0.8);
+
+            document.documentElement.style.setProperty(
+              '--audio-brand-color-dark',
+              `rgba(${progressDarkR}, ${progressDarkG}, ${progressDarkB}, 1)`
+            );
+
+            console.log('[For You] Applied brand color to audio button (matching module)');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[For You] Error applying brand color to audio button:', error);
+    }
   }
 
   console.log('For You: Content script ready');

@@ -1,0 +1,214 @@
+/* For You Audio Button - Story Narration Playback */
+
+.for-you-audio-button {
+  position: fixed;
+  bottom: 74px; /* 48px module height + 20px bottom margin + 6px gap */
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 99998; /* Below For You toggle */
+
+  width: 260px;
+  max-width: calc(100vw - 40px);
+  height: 48px;
+
+  /* Start hidden - will fade in */
+  opacity: 0;
+  pointer-events: none;
+
+  /* Smooth entrance animation with ease-out */
+  transition:
+    opacity 600ms ease-out,
+    transform 600ms ease-out;
+}
+
+.for-you-audio-button.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* Hidden state for scroll behavior */
+.for-you-audio-button.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  pointer-events: none;
+}
+
+/* Audio button */
+.for-you-audio-btn {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  /* Frosted glass effect - background set dynamically by JS to match module */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: none;
+
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+
+  cursor: pointer;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  /* Smooth interactions */
+  transition:
+    transform 150ms cubic-bezier(0.4, 0.0, 0.2, 1),
+    box-shadow 150ms cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 150ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.for-you-audio-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+
+.for-you-audio-btn:active {
+  transform: scale(0.98);
+}
+
+.for-you-audio-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Progress bar background (grows from left to right during playback) */
+.for-you-audio-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--audio-brand-color-dark, rgba(101, 67, 174, 1)); /* Darker shade */
+  border-radius: 24px;
+  transition: width 200ms linear;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Label container - handles overflow clipping */
+.for-you-audio-label-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 2;
+  padding: 0 20px;
+}
+
+/* Label text */
+.for-you-audio-label {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.24px;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+/* Marquee animation for long brand names */
+.for-you-audio-label.marquee {
+  animation: marqueeScroll 8s linear infinite;
+  animation-play-state: running;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  90% {
+    transform: translateX(-100%);
+  }
+  95% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+/* Pause marquee when button is playing audio */
+.for-you-audio-btn.playing .for-you-audio-label.marquee {
+  animation: none;
+}
+
+/* Loading state - subtle pulse */
+.for-you-audio-btn.loading {
+  animation: audioPulse 1.5s ease-in-out infinite;
+  cursor: wait;
+}
+
+@keyframes audioPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .for-you-audio-btn {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  .for-you-audio-btn:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .for-you-audio-button {
+    width: 260px;
+  }
+
+  .for-you-audio-label {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .for-you-audio-button {
+    width: 260px;
+    bottom: 74px; /* 6px gap maintained on mobile */
+  }
+
+  .for-you-audio-label {
+    font-size: 13px;
+  }
+}
+
+/* Accessibility - focus state */
+.for-you-audio-btn:focus {
+  outline: none;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+.for-you-audio-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+/* Print - hide audio button */
+@media print {
+  .for-you-audio-button {
+    display: none !important;
+  }
+}

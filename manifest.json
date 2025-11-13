@@ -23,6 +23,8 @@
         "scripts/crawler.js",
         "scripts/crawl-progress.js",
         "scripts/debug-overlay.js",
+        "scripts/audio-player.js",
+        "scripts/audio-button.js",
         "scripts/personalization.js",
         "scripts/quiz.js",
         "content.js"
@@ -31,7 +33,8 @@
         "styles/module.css",
         "styles/quiz.css",
         "styles/animations.css",
-        "styles/crawl-progress.css"
+        "styles/crawl-progress.css",
+        "styles/audio-button.css"
       ],
       "run_at": "document_end"
     }

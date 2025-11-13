@@ -191,6 +191,10 @@ const ForYouStorage = {
         if (key.startsWith('forYouMods_') && value.expiresAt && now > value.expiresAt) {
           keysToRemove.push(key);
         }
+        // Also clear expired audio
+        if (key.startsWith('forYouAudio_') && value.expiresAt && now > value.expiresAt) {
+          keysToRemove.push(key);
+        }
       }
 
       if (keysToRemove.length > 0) {
@@ -282,6 +286,62 @@ const ForYouStorage = {
     return prefs1.decisionStyle === prefs2.decisionStyle &&
            prefs1.visualStyle === prefs2.visualStyle &&
            prefs1.priority === prefs2.priority;
+  },
+
+  // Save audio data for a site + preferences combination
+  async saveAudio(siteKey, preferences, audioData) {
+    try {
+      const prefsHash = this.hashPreferences(preferences);
+      const key = `forYouAudio_${siteKey}_${prefsHash}`;
+
+      const data = {
+        audioDataUrl: audioData.audioDataUrl,
+        voiceUsed: audioData.voiceUsed,
+        brandName: audioData.brandName,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
+      };
+
+      await chrome.storage.local.set({ [key]: data });
+      console.log(`For You: Audio cached for ${siteKey}`);
+      return true;
+    } catch (error) {
+      console.error('For You: Error saving audio', error);
+      return false;
+    }
+  },
+
+  // Get cached audio for a site + preferences combination
+  async getAudio(siteKey, preferences) {
+    try {
+      const prefsHash = this.hashPreferences(preferences);
+      const key = `forYouAudio_${siteKey}_${prefsHash}`;
+      const result = await chrome.storage.local.get([key]);
+      const data = result[key];
+
+      if (!data) {
+        console.log(`For You: No cached audio for ${siteKey} with these preferences`);
+        return null;
+      }
+
+      // Check if cache has expired
+      if (Date.now() > data.expiresAt) {
+        console.log(`For You: Cached audio expired for ${siteKey}`);
+        await chrome.storage.local.remove([key]);
+        return null;
+      }
+
+      console.log(`For You: Using cached audio for ${siteKey}`);
+      return {
+        audioDataUrl: data.audioDataUrl,
+        voiceUsed: data.voiceUsed,
+        brandName: data.brandName
+      };
+
+    } catch (error) {
+      console.error('For You: Error getting cached audio', error);
+      return null;
+    }
   },
 
   // Generate site key from URL

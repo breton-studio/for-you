@@ -3,6 +3,8 @@
 const ForYouQuiz = {
   currentQuestion: 0,
   answers: {},
+  transformationComplete: false,
+  transformationPromise: null,
 
   questions: [
     {
@@ -113,6 +115,8 @@ const ForYouQuiz = {
     } else {
       container.innerHTML = this.renderDoneScreen();
       this.attachDoneListener();
+      // Start transformation immediately in background
+      this.startTransformation();
     }
   },
 
@@ -186,66 +190,98 @@ const ForYouQuiz = {
     }
   },
 
-  // Complete quiz and trigger transformation
-  async complete() {
-    // Save preferences
+  // Start transformation in background (called when done screen shows)
+  async startTransformation() {
+    console.log('[Quiz] Starting transformation in background...');
+
+    this.transformationComplete = false;
+
+    // Save preferences immediately
     await ForYouStorage.savePreferences(this.answers);
     await ForYouStorage.saveToggleState(true);
 
-    // Dismiss modal
-    await this.dismiss();
-
-    // Set toggle to loading state (midway with pulsing)
+    // Set toggle to loading state
     const toggle = document.querySelector('.for-you-toggle');
     if (toggle) {
       toggle.classList.add('loading');
-      console.log('[For You] Toggle set to loading state');
+      toggle.setAttribute('aria-checked', 'true');
+      console.log('[Quiz] Toggle set to loading state');
     }
 
     // Check if background crawl is still in progress
     if (window.ForYouCrawl && window.ForYouCrawl.isInProgress()) {
-      console.log('');
-      console.log('[For You] Site analysis still in progress');
-      console.log('[For You] Waiting for completion to ensure accurate personalization...');
+      console.log('[Quiz] Waiting for site analysis to complete...');
 
-      // Update debug overlay instead of showing modal
       if (window.ForYouDebugOverlay) {
         window.ForYouDebugOverlay.update('waiting', 'Waiting: Analysis to complete');
       }
 
-      // Wait for crawl to complete
       await window.ForYouCrawl.wait();
 
-      // Update debug overlay
       if (window.ForYouDebugOverlay) {
         window.ForYouDebugOverlay.remove('waiting');
         window.ForYouDebugOverlay.update('status', 'Status: Transforming page');
       }
 
-      console.log('[For You] Analysis complete. Proceeding with full site profile.');
-      console.log('');
+      console.log('[Quiz] Analysis complete. Proceeding with transformation.');
     } else {
-      console.log('[For You] Brand materials ready. Beginning transformation.');
+      console.log('[Quiz] Brand materials ready. Beginning transformation.');
       if (window.ForYouDebugOverlay) {
         window.ForYouDebugOverlay.update('status', 'Status: Transforming page');
       }
     }
 
-    // Trigger page transformation (with full profile if crawl completed, or current page if not)
+    // Start API call in background
     if (window.ForYouPersonalization) {
-      await window.ForYouPersonalization.executeTransformation(this.answers);
-    }
+      this.transformationPromise = window.ForYouPersonalization.executeTransformation(this.answers)
+        .then(() => {
+          console.log('[Quiz] Transformation complete');
+          this.transformationComplete = true;
 
-    // Update debug overlay
-    if (window.ForYouDebugOverlay) {
-      window.ForYouDebugOverlay.update('status', 'Status: Personalization active');
+          if (window.ForYouDebugOverlay) {
+            window.ForYouDebugOverlay.update('status', 'Status: Personalization active');
+          }
+          // Don't change toggle yet - wait for quiz dismiss
+        })
+        .catch((error) => {
+          console.error('[Quiz] Transformation failed:', error);
+          this.transformationComplete = false;
+          // Handle error - remove loading immediately
+          if (toggle) {
+            toggle.classList.remove('loading', 'on');
+          }
+        });
     }
+  },
 
-    // Remove loading state and complete toggle animation
-    if (toggle) {
-      toggle.classList.remove('loading');
-      toggle.classList.add('on');
-      console.log('[For You] Toggle animation completed');
+  // Complete quiz (just dismiss and wait for transformation)
+  async complete() {
+    console.log('[Quiz] Dismissing quiz overlay...');
+
+    // Dismiss quiz
+    await this.dismiss();
+
+    // Check if transformation is ready
+    const toggle = document.querySelector('.for-you-toggle');
+
+    if (this.transformationComplete) {
+      // API already done - animate toggle to ON immediately
+      console.log('[Quiz] Transformation ready - animating to ON');
+      if (toggle) {
+        toggle.classList.remove('loading');
+        toggle.classList.add('on');
+      }
+    } else {
+      // API still running - wait for it, then animate
+      console.log('[Quiz] Waiting for transformation to complete...');
+      if (this.transformationPromise) {
+        await this.transformationPromise;
+        if (toggle) {
+          toggle.classList.remove('loading');
+          toggle.classList.add('on');
+          console.log('[Quiz] Toggle animation completed');
+        }
+      }
     }
   },
 

@@ -2532,6 +2532,8 @@ const ForYouPersonalization = {
       // 4.6. Generate and log brand story (only on first transformation, not from cache)
       if (businessProfile.aboutNarrative || businessProfile.teamInfo || businessProfile.contentThemes) {
         const brandStory = await this.generateBrandStory(businessProfile, preferences);
+        const brandName = this.extractBusinessName(businessProfile);
+
         console.log('');
         console.log('═══════════════════════════════════════');
         console.log('FOR YOU: BRAND STORY');
@@ -2542,6 +2544,30 @@ const ForYouPersonalization = {
         console.log('Voice Gender:', brandStory.voiceGender);
         console.log('═══════════════════════════════════════');
         console.log('');
+
+        // 4.7. Generate audio from brand story
+        const audioData = await this.generateBrandAudio(
+          brandStory.story,
+          brandStory.voiceGender,
+          brandName,
+          preferences
+        );
+
+        // Store audio data globally for audio button to access
+        if (audioData) {
+          window.forYouAudioData = audioData;
+          console.log('[For You] Audio: Data stored globally for button');
+          console.log('[For You] Audio: Has audioDataUrl:', !!audioData.audioDataUrl);
+          console.log('[For You] Audio: Brand name:', audioData.brandName);
+
+          // Trigger button creation now that audio data is ready
+          if (window.showAudioButtonIfAvailable) {
+            console.log('[For You] Audio: Triggering button creation');
+            window.showAudioButtonIfAvailable();
+          }
+        } else {
+          console.log('[For You] Audio: No audio data - button will not show');
+        }
       }
 
       // 5. Reorder and collapse sections (starts at 700ms)
@@ -3181,6 +3207,86 @@ const ForYouPersonalization = {
       return years > 0 ? `${years}+ years` : null;
     }
     return null;
+  },
+
+  // Generate audio from brand story using Eleven Labs TTS
+  async generateBrandAudio(story, voiceGender, brandName, preferences) {
+    console.log('[For You] Audio: Checking for cached audio...');
+    if (window.ForYouDebugOverlay) {
+      window.ForYouDebugOverlay.update('audio', 'Audio: Checking cache...');
+    }
+
+    const siteKey = ForYouStorage.getSiteKey();
+
+    // Check cache first
+    const cachedAudio = await ForYouStorage.getAudio(siteKey, preferences);
+    if (cachedAudio) {
+      console.log('[For You] Audio: Cache hit - using cached audio');
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('audio', 'Audio: Ready (cached)');
+      }
+      return cachedAudio;
+    }
+
+    console.log('[For You] Audio: Cache miss - generating with TTS');
+    console.log(`[For You] Audio: Story length: ${story.length} chars, Voice: ${voiceGender}`);
+    if (window.ForYouDebugOverlay) {
+      window.ForYouDebugOverlay.update('audio', 'Audio: Generating...');
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          story,
+          voiceGender,
+          brandName
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[For You] Audio: API request failed', errorData);
+        throw new Error(errorData.message || 'TTS API request failed');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error('[For You] Audio: TTS generation failed', data.error);
+        throw new Error(data.error || 'TTS generation failed');
+      }
+
+      const audioSizeKB = Math.round(data.audioDataUrl.length / 1024);
+      console.log(`[For You] Audio: Generated successfully`);
+      console.log(`[For You] Audio: Size: ${audioSizeKB}KB, Time: ${data.processingTime}ms, Cached: ${data.cached}`);
+
+      const audioData = {
+        audioDataUrl: data.audioDataUrl,
+        voiceUsed: data.voiceUsed,
+        brandName
+      };
+
+      // Cache audio for future use
+      await ForYouStorage.saveAudio(siteKey, preferences, audioData);
+      console.log('[For You] Audio: Cached for future use');
+
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('audio', 'Audio: Ready');
+      }
+
+      return audioData;
+
+    } catch (error) {
+      console.error('[For You] Audio: Error:', error.message);
+      if (window.ForYouDebugOverlay) {
+        window.ForYouDebugOverlay.update('audio', 'Audio: Error');
+      }
+      return null; // Return null on error - audio button won't show
+    }
   },
 
   // Remove all personalization
